@@ -34,6 +34,7 @@ include("analysis/harmonic_voltage.jl")
 include("analysis/modal.jl")
 
 include("postprocessing/reconstruction.jl")
+include("postprocessing/observables.jl")
 include("postprocessing/vtk_output.jl")
 
 export AbstractFormulation, AxisymmetricRZ
@@ -58,6 +59,8 @@ export FacetBoundary, AxisBoundary, AxisymmetricBoundaryConditions
 export PiezoProblem, AssembledPiezoProblem, HarmonicVoltageAnalysis, ShortCircuitModalAnalysis
 export solve, assemble, reduce
 export HarmonicVoltageResult, ShortCircuitModalReduction, ShortCircuitModalResult
+export AbstractObservable, AdmittanceObservable, ChargeObservable, CurrentObservable
+export ModalFrequenciesObservable, evaluate
 export reconstruct_fields, write_vtk
 
 end
