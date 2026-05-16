@@ -10,6 +10,9 @@ struct ShortCircuitModalAnalysis{N}
 end
 
 
+check_supported(::Lossless, ::ShortCircuitModalAnalysis) = nothing
+check_supported(::PhysicalLoss{<:RealMaterial,<:NoSystemDamping}, ::ShortCircuitModalAnalysis) = nothing
+
 """
     ShortCircuitModalReduction
 
@@ -65,6 +68,7 @@ end
 
 
 function solve(problem::PiezoProblem, analysis::ShortCircuitModalAnalysis)
+    check_supported(problem.loss, analysis)
     assembled = assemble(problem)
     reduction = reduce(assembled, analysis)
     constrained = apply_modal_constraints(

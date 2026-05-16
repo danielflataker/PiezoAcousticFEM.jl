@@ -41,6 +41,21 @@
     @test as_given.cᴱ ≈ reduce_material(complex_full, AxisymmetricRZ()).cᴱ
     @test !(eltype(real_policy.cᴱ) <: Complex)
     @test real_policy.cᴱ ≈ effective.cᴱ
+
+    complex_loss = PiezoComplexMaterialLoss(; Qm=20.0, tan_delta=0.03, Qe=40.0)
+    lossy = effective_material(
+        base,
+        AxisymmetricRZ(),
+        PhysicalLoss(complex_loss, NoSystemDamping()),
+    )
+    lossless_axi = reduce_material(base, AxisymmetricRZ())
+    @test lossy.cᴱ ≈ lossless_axi.cᴱ .* (1 + im / complex_loss.Qm)
+    @test lossy.e ≈ lossless_axi.e .* (1 + im / complex_loss.Qe)
+    @test lossy.εˢ ≈ lossless_axi.εˢ .* (1 - im * complex_loss.tan_delta)
+    @test lossy.ρ == lossless_axi.ρ
+    @test_throws ArgumentError PiezoComplexMaterialLoss(; Qm=0.0, tan_delta=0.03, Qe=40.0)
+    @test_throws ArgumentError PiezoComplexMaterialLoss(; Qm=20.0, tan_delta=-0.03, Qe=40.0)
+    @test_throws ArgumentError PiezoComplexMaterialLoss(; Qm=20.0, tan_delta=0.03, Qe=0.0)
 end
 
 @testset "specialized scalar types survive assembly reductions" begin
@@ -109,4 +124,3 @@ end
     @test ForwardDiff.partials(dual_value, 1) != 0
     @test ForwardDiff.derivative(reduced_trace, 1.0) ≈ ForwardDiff.partials(dual_value, 1)
 end
-

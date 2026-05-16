@@ -65,6 +65,16 @@ struct HarmonicVoltageAnalysis{W,V,C}
 end
 
 
+check_supported(loss, analysis) =
+    throw(ArgumentError("loss model $(typeof(loss)) is not supported for analysis $(typeof(analysis))"))
+
+check_supported(::Lossless, ::HarmonicVoltageAnalysis) = nothing
+
+check_supported(
+    ::PhysicalLoss{<:Union{RealMaterial,MaterialAsGiven,PiezoComplexMaterialLoss},<:NoSystemDamping},
+    ::HarmonicVoltageAnalysis,
+) = nothing
+
 """
     HarmonicVoltageReduction
 
@@ -139,6 +149,7 @@ end
 Assemble, reduce, and solve a `PiezoProblem` for the given analysis.
 """
 function solve(problem::PiezoProblem, analysis::HarmonicVoltageAnalysis)
+    check_supported(problem.loss, analysis)
     assembled = assemble(problem)
     reduction = reduce(assembled, analysis)
     solution = solve_direct_voltage(

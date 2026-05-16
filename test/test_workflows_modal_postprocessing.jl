@@ -72,6 +72,40 @@
     @test result.solution.admittance ≈ explicit_solution.admittance
 end
 
+@testset "direct voltage supports complex material loss" begin
+    kin = AxisymmetricRZ()
+    mat = PZT5A()
+    ip = Lagrange{RefQuadrilateral,1}()
+    qr = QuadratureRule{RefQuadrilateral}(2)
+    grid = generate_grid(
+        Quadrilateral,
+        (2, 2),
+        Vec{2}((0.0, 0.0)),
+        Vec{2}((1.0e-3, 1.0e-3)),
+    )
+    problem = PiezoProblem(
+        grid,
+        mat,
+        kin,
+        ip,
+        qr;
+        electrodes=TwoTerminalElectrodes(FacetElectrode("top"), FacetElectrode("bottom")),
+        boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
+        loss=PhysicalLoss(
+            PiezoComplexMaterialLoss(; Qm=50.0, tan_delta=0.02, Qe=80.0),
+            NoSystemDamping(),
+        ),
+    )
+    result = solve(problem, HarmonicVoltageAnalysis(2π * 10_000.0, 1.0, :exp_iomega_t))
+
+    @test eltype(result.assembled.material.cᴱ) <: Complex
+    @test eltype(result.assembled.assembly.system.Kuu) <: Complex
+    @test eltype(result.solution.displacement) <: Complex
+    @test eltype(result.solution.potential) <: Complex
+    @test isfinite(real(result.solution.admittance))
+    @test isfinite(imag(result.solution.admittance))
+end
+
 @testset "short-circuit modal dense reference" begin
     kin = AxisymmetricRZ()
     mat = PZT5A()
@@ -133,6 +167,44 @@ end
     @test fields.frequency == result.frequencies[1]
     @test fields.normalization == :mass
     @test_throws ArgumentError reconstruct_fields(result, 0)
+
+    complex_loss_problem = PiezoProblem(
+        grid,
+        mat,
+        kin,
+        ip,
+        qr;
+        electrodes=TwoTerminalElectrodes(FacetElectrode("top"), FacetElectrode("bottom")),
+        boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
+        loss=PhysicalLoss(
+            PiezoComplexMaterialLoss(; Qm=50.0, tan_delta=0.02, Qe=80.0),
+            NoSystemDamping(),
+        ),
+    )
+    as_given_problem = PiezoProblem(
+        grid,
+        mat,
+        kin,
+        ip,
+        qr;
+        electrodes=TwoTerminalElectrodes(FacetElectrode("top"), FacetElectrode("bottom")),
+        boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
+        loss=PhysicalLoss(MaterialAsGiven(), NoSystemDamping()),
+    )
+    real_policy_problem = PiezoProblem(
+        grid,
+        mat,
+        kin,
+        ip,
+        qr;
+        electrodes=TwoTerminalElectrodes(FacetElectrode("top"), FacetElectrode("bottom")),
+        boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
+        loss=PhysicalLoss(RealMaterial(), NoSystemDamping()),
+    )
+
+    @test solve(real_policy_problem, analysis) isa ShortCircuitModalResult
+    @test_throws ArgumentError solve(complex_loss_problem, analysis)
+    @test_throws ArgumentError solve(as_given_problem, analysis)
 end
 
 @testset "VTK solution output" begin

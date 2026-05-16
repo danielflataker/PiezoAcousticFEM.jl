@@ -38,7 +38,8 @@ include("postprocessing/vtk_output.jl")
 
 export AbstractFormulation, AxisymmetricRZ
 export Piezo6mmConstants, Piezo6mmAxi, PZT5A, reduce_material, effective_material
-export Lossless, PhysicalLoss, RealMaterial, MaterialAsGiven, NoSystemDamping
+export Lossless, PhysicalLoss, RealMaterial, MaterialAsGiven, PiezoComplexMaterialLoss
+export NoSystemDamping
 export strain, electric_field, integration_weight
 export stress, electric_displacement
 export PiezoElementMatrices, KFormSystem, piezo_element_matrices

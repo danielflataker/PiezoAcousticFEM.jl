@@ -51,6 +51,27 @@ extra damping model is added.
 struct MaterialAsGiven <: AbstractMaterialPolicy end
 
 """
+    PiezoComplexMaterialLoss(; Qm, tan_delta, Qe)
+
+Simple material-loss policy for direct harmonic smoke tests. With the current
+`exp(im*ω*t)` convention it scales stiffness by `1 + im / Qm`, piezoelectric
+coupling by `1 + im / Qe`, and permittivity by `1 - im * tan_delta`.
+"""
+struct PiezoComplexMaterialLoss{QM,TD,QE} <: AbstractMaterialPolicy
+    Qm::QM
+    tan_delta::TD
+    Qe::QE
+end
+
+function PiezoComplexMaterialLoss(; Qm, tan_delta, Qe)
+    Qm > zero(Qm) || throw(ArgumentError("Qm must be positive"))
+    tan_delta >= zero(tan_delta) || throw(ArgumentError("tan_delta must be nonnegative"))
+    Qe > zero(Qe) || throw(ArgumentError("Qe must be positive"))
+
+    return PiezoComplexMaterialLoss(Qm, tan_delta, Qe)
+end
+
+"""
     NoSystemDamping()
 
 System-damping policy with no added damping matrix.
@@ -220,3 +241,21 @@ lossless_material(material::Piezo6mmAxi) =
 
 apply_material_policy(material::AbstractPiezoMaterial, ::RealMaterial) = lossless_material(material)
 apply_material_policy(material::AbstractPiezoMaterial, ::MaterialAsGiven) = material
+
+function apply_material_policy(material::Piezo6mmConstants, loss::PiezoComplexMaterialLoss)
+    return Piezo6mmConstants(
+        material.cᴱ .* complex(one(loss.Qm), inv(loss.Qm)),
+        material.e .* complex(one(loss.Qe), inv(loss.Qe)),
+        material.εˢ .* complex(one(loss.tan_delta), -loss.tan_delta),
+        material.ρ,
+    )
+end
+
+function apply_material_policy(material::Piezo6mmAxi, loss::PiezoComplexMaterialLoss)
+    return Piezo6mmAxi(
+        material.cᴱ .* complex(one(loss.Qm), inv(loss.Qm)),
+        material.e .* complex(one(loss.Qe), inv(loss.Qe)),
+        material.εˢ .* complex(one(loss.tan_delta), -loss.tan_delta),
+        material.ρ,
+    )
+end
