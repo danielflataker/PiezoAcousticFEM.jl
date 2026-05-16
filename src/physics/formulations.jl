@@ -3,16 +3,16 @@
 """
     AbstractFormulation
 
-Supertype for feltformuleringer, for eksempel aksesymmetrisk r-z-formulering
-eller senere full 3D-/akustisk formulering.
+Supertype for field formulations, such as the axisymmetric r-z formulation or a
+future full 3D/acoustic formulation.
 """
 abstract type AbstractFormulation end
 
 """
     AxisymmetricRZ
 
-Aksesymmetrisk formulering i r-z-planet. En 2D mesh i koordinatene `x = [r, z]`
-representerer et 3D legeme rotert rundt z-aksen.
+Axisymmetric formulation in the r-z plane. A 2D mesh in coordinates
+`x = [r, z]` represents a 3D body rotated around the z-axis.
 """
 struct AxisymmetricRZ <: AbstractFormulation end
 
@@ -22,11 +22,11 @@ symmetry_measure(::AxisymmetricRZ) = 2π
 """
     integration_weight(::AxisymmetricRZ, x, dΩ)
 
-Returnerer aksesymmetrisk integrasjonsvekt
+Return the axisymmetric integration weight
 
     2π*r*dΩ
 
-hvor `r = x[1]`. Her er `dΩ` arealelementet i r-z-planet fra Ferrite.
+where `r = x[1]`. Here `dΩ` is Ferrite's area element in the r-z plane.
 """
 function integration_weight(kin::AxisymmetricRZ, x, dΩ)
     r = coordinate_measure(kin, x)
@@ -39,13 +39,13 @@ end
 """
     strain(::AxisymmetricRZ, u, ∇u, x)
 
-Returnerer Voigt-strain for aksesymmetrisk r-z-formulering:
+Return the Voigt strain for the axisymmetric r-z formulation:
 
     S = [S_rr, S_θθ, S_zz, γ_rz]
 
-der γ_rz = 2S_rz = ∂u_r/∂z + ∂u_z/∂r.
+where γ_rz = 2S_rz = ∂u_r/∂z + ∂u_z/∂r.
 
-Antar at u = [u_r, u_z], x = [r, z], og at ∇u[i,j] = ∂u_i/∂x_j.
+Assumes u = [u_r, u_z], x = [r, z], and ∇u[i,j] = ∂u_i/∂x_j.
 """
 function strain(::AxisymmetricRZ, u, ∇u, x)
     r = x[1]

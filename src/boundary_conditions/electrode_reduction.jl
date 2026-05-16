@@ -1,10 +1,10 @@
 """
     ElectrodeReducedKForm
 
-K-form der jordede potensial-DOF-er er fjernet og alle DOF-er på den drivne
-elektroden er kollapset til ett skalarpotensial `V`. Ukjente i den frie
-delen er `u` og de interne potensialene `ϕᵢ`; elektrodekolonner og -rader er
-lagret separat slik at en direkte spenningssolve kan sette `V = V0`.
+K-form where grounded potential DOFs have been removed and all DOFs on the
+driven electrode have been collapsed to one scalar potential `V`. The unknowns
+in the free part are `u` and the internal potentials `ϕᵢ`; electrode columns
+and rows are stored separately so a direct voltage solve can set `V = V0`.
 """
 struct ElectrodeReducedKForm{
     KUU<:AbstractMatrix,

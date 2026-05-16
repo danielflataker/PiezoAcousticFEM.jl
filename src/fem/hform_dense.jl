@@ -1,8 +1,8 @@
 """
     HFormSystem
 
-H-form-system etter at indre potensial-DOF-er er kondensert ut og
-den ikke-jordede elektroden er representert med ett skalarpotensial.
+H-form system after internal potential DOFs have been condensed out and the
+non-grounded electrode is represented by one scalar potential.
 
 ```text
 -ω² [Muu 0] [u] + [Huu  Huϕ] [u] = [F]
@@ -21,18 +21,19 @@ end
 """
     h_form_dense(system, partition)
 
-Transformer globale tette K-form-blokker til Kocbachs H-form for små
-verifikasjonsproblemer. Dette følger KLV 1999 Eq. (2.192)-(2.203) /
-Kocbach 2000 Eq. (3.190)-(3.192):
+Transform global dense K-form blocks to Kocbach's H-form for small verification
+problems. This follows KLV 1999 Eq. (2.192)-(2.203) / Kocbach 2000
+Eq. (3.190)-(3.192):
 
-- jordede potensial-DOF-er er Dirichlet-DOF-er og brukes ikke i reduksjonen,
-- indre potensial-DOF-er kondenseres ut med et Schur-komplement,
-- alle noder på den drivne elektroden bindes til ett skalarpotensial via
+- grounded potential DOFs are Dirichlet DOFs and are not used in the reduction,
+- internal potential DOFs are condensed out with a Schur complement,
+- all nodes on the driven electrode are tied to one scalar potential via
   `Ip = [1, 1, ..., 1]ᵀ`.
 
-Implementasjonen bruker lineære solves (`Kii \\ ...`) i stedet for eksplisitt
-invers, men uttrykkene er algebraisk de samme som hos Kocbach. Den materialiserer
-tette matriser og skal derfor ikke brukes som produksjonsvei for store nett.
+The implementation uses linear solves (`Kii \\ ...`) instead of an explicit
+inverse, but the expressions are algebraically the same as Kocbach's. It
+materializes dense matrices and should therefore not be used as the production
+path for large grids.
 """
 function h_form_dense(system::KFormSystem, partition::HarmonicVoltageDofPartition)
     validate_partition(system, partition)

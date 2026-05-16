@@ -1,7 +1,7 @@
 """
     reconstruct_fields(assembly, solution)
 
-Rekonstruer nodale felt fra kompakte K-form-løsningsvektorer.
+Reconstruct nodal fields from compact K-form solution vectors.
 """
 function reconstruct_fields(assembly::KFormAssembly, solution::DirectVoltageSolution)
     grid = Ferrite.get_grid(assembly.dofhandler)

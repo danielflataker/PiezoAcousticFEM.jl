@@ -3,11 +3,11 @@
 """
     electric_field(::AxisymmetricRZ, ∇ϕ)
 
-Returnerer elektrisk felt for aksesymmetrisk r-z-formulering:
+Return the electric field for the axisymmetric r-z formulation:
 
     E = [E_r, E_z] = -∇ϕ
 
-Antar at ∇ϕ = [∂ϕ/∂r, ∂ϕ/∂z].
+Assumes ∇ϕ = [∂ϕ/∂r, ∂ϕ/∂z].
 """
 function electric_field(::AxisymmetricRZ, ∇ϕ)
     Eᵣ = -∇ϕ[1]
@@ -19,14 +19,14 @@ end
 """
     stress(material::Piezo6mmAxi, S, E)
 
-Returnerer mekanisk stress på Voigt-form for et lineært piezoelektrisk materiale:
+Return the mechanical stress in Voigt form for a linear piezoelectric material:
 
     T = cᴱ*S - transpose(e)*E
 
-Her er `S = [S_rr, S_θθ, S_zz, γ_rz]` og `E = [E_r, E_z]`.
-Bruker `transpose(material.e)` i stedet for `material.e'`, slik at uttrykket ikke
-komplekskonjugerer piezomatrisen dersom tapsmodeller med komplekse konstanter
-legges til senere.
+Here `S = [S_rr, S_θθ, S_zz, γ_rz]` and `E = [E_r, E_z]`.
+This uses `transpose(material.e)` instead of `material.e'`, so the expression
+does not complex-conjugate the piezoelectric matrix if later loss models add
+complex constants.
 """
 function stress(material::Piezo6mmAxi, S, E)
     return material.cᴱ * S - transpose(material.e) * E
@@ -35,11 +35,11 @@ end
 """
     electric_displacement(material::Piezo6mmAxi, S, E)
 
-Returnerer elektrisk flukstetthet for et lineært piezoelektrisk materiale:
+Return the electric displacement for a linear piezoelectric material:
 
     D = e*S + εˢ*E
 
-Her er `S = [S_rr, S_θθ, S_zz, γ_rz]` og `E = [E_r, E_z]`.
+Here `S = [S_rr, S_θθ, S_zz, γ_rz]` and `E = [E_r, E_z]`.
 """
 function electric_displacement(material::Piezo6mmAxi, S, E)
     return material.e * S + material.εˢ * E

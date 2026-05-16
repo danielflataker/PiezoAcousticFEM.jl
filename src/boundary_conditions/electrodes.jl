@@ -1,8 +1,8 @@
 """
     FacetElectrode(facetset)
 
-Eksplisitt elektrodeobjekt som peker på et Ferrite facetset eller et
-facetset-navn. Strengnavn holdes dermed i adapterlaget, ikke som kjerne-API.
+Explicit electrode object pointing to a Ferrite facetset or facetset name.
+String names therefore stay in the adapter layer, not as the core API.
 """
 abstract type AbstractElectrode end
 
@@ -14,8 +14,8 @@ end
 """
     TwoTerminalElectrodes(signal, reference)
 
-To-terminal elektrodeoppsett. Analysen bestemmer om `signal` er drevet,
-kortsluttet, flytende osv.; `reference` er referanseelektroden.
+Two-terminal electrode setup. The analysis decides whether `signal` is driven,
+short-circuited, floating, etc.; `reference` is the reference electrode.
 """
 struct TwoTerminalElectrodes{D<:AbstractElectrode,G<:AbstractElectrode}
     signal::D

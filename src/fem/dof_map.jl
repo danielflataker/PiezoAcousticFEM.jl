@@ -80,7 +80,7 @@ compact_potential_node_dof(dofmap::PiezoFieldDofMap, nodeid::Integer) =
 """
     _field_dofs(dh, field)
 
-Ferrite-adapter: hent alle globale Ferrite-DOF-er for ett felt.
+Ferrite adapter: get all global Ferrite DOFs for one field.
 """
 function _field_dofs(dh::DofHandler, field::Symbol)
     range = dof_range(dh, field)

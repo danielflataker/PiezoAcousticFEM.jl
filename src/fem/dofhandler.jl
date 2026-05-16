@@ -3,9 +3,9 @@
 """
     KFormAssembly
 
-Adapterresultat mellom Ferrite og Kocbach-blokkene. Ferrite eier mesh,
-celler, interpolasjon og global DOF-nummerering. `system` er vår
-fysikkrepresentasjon på K-form, med kompakte blokker.
+Adapter result between Ferrite and the Kocbach blocks. Ferrite owns the mesh,
+cells, interpolation, and global DOF numbering. `system` is this package's
+physics representation in K-form, with compact blocks.
 """
 struct KFormAssembly{S,DH,M}
     system::S
@@ -16,8 +16,8 @@ end
 """
     piezo_dofhandler(grid, ip)
 
-Ferrite-adapter: lag en `DofHandler` for feltene `:u` og `:ϕ`.
-Interpolasjonen `ip` er skalar; forskyvningsfeltet bruker `ip^2`.
+Ferrite adapter: build a `DofHandler` for the fields `:u` and `:ϕ`.
+The interpolation `ip` is scalar; the displacement field uses `ip^2`.
 """
 function piezo_dofhandler(grid, ip)
     dh = DofHandler(grid)
@@ -31,9 +31,9 @@ end
 """
     potential_dofs_on_facets(assembly, facetset)
 
-Ferrite-adapter: finn kompakte `ϕ`-indekser for potensial-DOF-er på et
-Ferrite facetset. Disse indeksene kan brukes direkte i analyse-spesifikke
-elektriske DOF-partisjoner.
+Ferrite adapter: find compact `ϕ` indices for potential DOFs on a Ferrite
+facetset. These indices can be used directly in analysis-specific electrical
+DOF partitions.
 """
 function potential_dofs_on_facets(assembly::KFormAssembly, facetset)
     dh = assembly.dofhandler
@@ -48,8 +48,8 @@ end
 """
     displacement_component_dofs_on_facets(assembly, facetset, component)
 
-Finn kompakte `u`-indekser for en displacement-komponent på et Ferrite
-facetset. `component` kan være `:r`/`:ur` eller `:z`/`:uz`.
+Find compact `u` indices for a displacement component on a Ferrite facetset.
+`component` may be `:r`/`:ur` or `:z`/`:uz`.
 """
 function displacement_component_dofs_on_facets(assembly::KFormAssembly, facetset, component::Symbol)
     dh = assembly.dofhandler
@@ -64,8 +64,8 @@ end
 """
     axis_radial_displacement_constraint(assembly; axis, value=0)
 
-Lag en homogen Dirichlet-betingelse for `u_r` på symmetriaksen. `axis` kan
-være en eksplisitt `AxisBoundary`.
+Build a homogeneous Dirichlet condition for `u_r` on the symmetry axis. `axis`
+must be an explicit `AxisBoundary`.
 """
 function axis_radial_displacement_constraint(assembly::KFormAssembly; axis::AxisBoundary, value=0)
     grid = Ferrite.get_grid(assembly.dofhandler)
@@ -79,7 +79,7 @@ end
 """
     potential_partition(assembly; driven, grounded)
 
-Bygg Kocbachs potensialpartisjon fra eksplisitte elektrodeobjekter.
+Build Kocbach's potential partition from explicit electrode objects.
 """
 function potential_partition(assembly::KFormAssembly; driven::FacetElectrode, grounded::FacetElectrode)
     grid = Ferrite.get_grid(assembly.dofhandler)

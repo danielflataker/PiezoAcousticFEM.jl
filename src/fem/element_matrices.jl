@@ -3,17 +3,17 @@
 """
     PiezoElementMatrices
 
-Lokale elementmatriser for et aksesymmetrisk piezoelement.
+Local element matrices for an axisymmetric piezoelectric element.
 
-DOF-rekkefølgen antas å være:
-- mekanisk: `u = [u_r, u_z]`
-- elektrisk: `ϕ`
+The assumed DOF ordering is:
+- mechanical: `u = [u_r, u_z]`
+- electrical: `ϕ`
 
-Matrisene er blokkene
+The matrices are the blocks
 
     Kuu, Kuϕ, Kϕu, Kϕϕ, Muu
 
-før de eventuelt settes inn i en global matrise.
+before they are inserted into a global matrix.
 """
 struct PiezoElementMatrices{KUU,KUP,KPU,KPP,MUU}
     Kuu::KUU
@@ -114,8 +114,8 @@ function Bϕ_matrix(kin::AxisymmetricRZ, cellvalues, q)
 
         # E = -∇ϕ.
         #
-        # Her lar vi Bϕ være gradientoperatoren ∇ϕ.
-        # Fortegn håndteres i elementintegralene.
+        # Bϕ is the gradient operator ∇ϕ.
+        # Signs are handled in the element integrals.
         Bϕ[1, a] = ∇N[1]
         Bϕ[2, a] = ∇N[2]
     end
@@ -144,10 +144,11 @@ end
 """
     piezo_element_matrices(cellvalues_u, cellvalues_ϕ, xᵉ, material, formulation)
 
-Lager lokale elementmatriser for ett aksesymmetrisk piezoelement.
+Build local element matrices for one axisymmetric piezoelectric element.
 
-Forutsetter at `reinit!` allerede er kalt på cellvalues-objektene.
-`xᵉ` er elementets fysiske nodekoordinater, typisk fra `getcoordinates(cell)`.
+Assumes `reinit!` has already been called on the cellvalues objects.
+`xᵉ` contains the element's physical node coordinates, typically from
+`getcoordinates(cell)`.
 """
 function piezo_element_matrices(cellvalues_u, cellvalues_ϕ, xᵉ,
     material::Piezo6mmAxi,
@@ -174,12 +175,12 @@ function piezo_element_matrices(cellvalues_u, cellvalues_ϕ, xᵉ,
         elem.Kuu .+= transpose(Bu) * material.cᴱ * Bu * dV
 
         # E = -∇ϕ.
-        # Fra T = cᴱS - eᵀE = cᴱS + eᵀ∇ϕ.
-        # Dette gir fortegnkonvensjonen under for den mekaniske ligningen.
+        # From T = cᴱS - eᵀE = cᴱS + eᵀ∇ϕ.
+        # This gives the sign convention below for the mechanical equation.
         elem.Kuϕ .+= transpose(Bu) * transpose(material.e) * Bϕ * dV
 
-        # Fra D = eS + εˢE = eS - εˢ∇ϕ.
-        # Dette matcher Kocbach/KLV sin K-form med negativ dielektrisk blokk.
+        # From D = eS + εˢE = eS - εˢ∇ϕ.
+        # This matches the Kocbach/KLV K-form with a negative dielectric block.
         elem.Kϕu .+= transpose(Bϕ) * material.e * Bu * dV
         elem.Kϕϕ .-= transpose(Bϕ) * material.εˢ * Bϕ * dV
 

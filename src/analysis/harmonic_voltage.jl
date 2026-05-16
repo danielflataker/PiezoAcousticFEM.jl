@@ -1,9 +1,9 @@
 """
     PiezoProblem(grid, material_source, formulation, interpolation, quadrature; electrodes, boundary_conditions, loss)
 
-Problemdefinisjon for en piezoelektrisk struktur. `material_source` lagres slik
-det ble gitt; formulering- og loss-spesifikt materiale lages først ved
-assembly via [`effective_material`](@ref).
+Problem definition for a piezoelectric structure. `material_source` is stored
+as supplied; formulation- and loss-specific material is created during assembly
+via [`effective_material`](@ref).
 """
 struct PiezoProblem{G,M,F,I,Q,E,B,L}
     grid::G
@@ -55,8 +55,8 @@ end
 """
     HarmonicVoltageAnalysis(ω, voltage, convention)
 
-Direkte harmonisk spenningsanalyse. `convention` beskriver tidskonvensjonen
-som brukes ved admittans- og fasepostprosessering.
+Direct harmonic voltage analysis. `convention` describes the time convention
+used for admittance and phase postprocessing.
 """
 struct HarmonicVoltageAnalysis{W,V,C}
     ω::W
@@ -81,7 +81,7 @@ end
 """
     HarmonicVoltageResult
 
-Resultatcontainer for `solve(problem, ::HarmonicVoltageAnalysis)`.
+Result container for `solve(problem, ::HarmonicVoltageAnalysis)`.
 """
 struct HarmonicVoltageResult{P,A,AP,R,S}
     problem::P

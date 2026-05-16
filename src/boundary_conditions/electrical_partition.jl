@@ -1,14 +1,14 @@
 """
     HarmonicVoltageDofPartition(nϕ, internal, driven, grounded)
 
-Partisjon av de globale elektriske potensial-DOF-ene for harmonisk
-spenningsdrift:
+Partition of the global electric potential DOFs for harmonic voltage drive:
 
-- `internal`: noder som ikke ligger på elektroder (`ϕᵢ` hos Kocbach).
-- `driven`: noder på den ikke-jordede elektroden (`ϕₚ = Ip * ϕ`).
-- `grounded`: noder på referanseelektroden, satt til null og derfor fjernet.
+- `internal`: nodes not on electrodes (`ϕᵢ` in Kocbach's notation).
+- `driven`: nodes on the non-grounded electrode (`ϕₚ = Ip * ϕ`).
+- `grounded`: nodes on the reference electrode, set to zero and therefore
+  removed.
 
-Indeksene er 1-baserte Julia-indekser inn i den globale `ϕ`-vektoren.
+The indices are 1-based Julia indices into the global `ϕ` vector.
 """
 struct HarmonicVoltageDofPartition
     nϕ::Int
@@ -31,8 +31,9 @@ end
 """
     ShortCircuitDofPartition(nϕ, internal, grounded)
 
-Partisjon av potensial-DOF-er for kortsluttet modal analyse. Elektrodene er
-homogene elektriske Dirichlet-DOF-er; bare interne potensial-DOF-er kondenseres.
+Partition of potential DOFs for short-circuit modal analysis. The electrodes
+are homogeneous electric Dirichlet DOFs; only internal potential DOFs are
+condensed.
 """
 struct ShortCircuitDofPartition
     nϕ::Int

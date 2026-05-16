@@ -1,7 +1,7 @@
 """
     DirectVoltageSolverInfo
 
-Metadata for den lineære solve-delen av en direkte spenningsanalyse.
+Metadata for the linear solve part of a direct voltage analysis.
 """
 struct DirectVoltageSolverInfo{N,R}
     method::Symbol

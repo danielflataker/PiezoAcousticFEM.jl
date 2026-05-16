@@ -3,7 +3,7 @@
 """
     AbstractMaterial
 
-Felles supertype for materialmodeller i PiezoAcousticFEM.
+Common supertype for material models in PiezoAcousticFEM.
 """
 
 abstract type AbstractMaterial end
@@ -11,7 +11,7 @@ abstract type AbstractMaterial end
 """
     AbstractPiezoMaterial <: AbstractMaterial
 
-Supertype for lineære piezoelektriske materialmodeller.
+Supertype for linear piezoelectric material models.
 """
 abstract type AbstractPiezoMaterial <: AbstractMaterial end
 
@@ -71,9 +71,9 @@ end
 """
     Piezo6mmConstants
 
-Full 6mm piezoelektrisk materialmodell i Voigt-form.
-Feltene kan ha uavhengige elementtyper, slik at elastisitet, piezokobling,
-permittivitet og massetetthet ikke kunstig konverteres til samme scalar-type.
+Full 6mm piezoelectric material model in Voigt form. The fields may have
+independent element types, so stiffness, piezoelectric coupling, permittivity,
+and mass density are not artificially converted to one scalar type.
 """
 struct Piezo6mmConstants{TC,TE,Tε,Tρ} <: AbstractPiezoMaterial
     cᴱ::SMatrix{6,6,TC,36}
@@ -85,21 +85,21 @@ end
 """
     Piezo6mmAxi
 
-Piezoelektrisk 6mm-materiale eksplisitt redusert til aksesymmetrisk
-r-z-formulering.
+6mm piezoelectric material explicitly reduced to the axisymmetric r-z
+formulation.
 
-Feltene har dimensjoner
+The fields have dimensions
 
     cᴱ :: 4×4
     e  :: 2×4
     εˢ :: 2×2
 
-og brukes sammen med
+and are used with
 
     S = [S_rr, S_θθ, S_zz, γ_rz]
     E = [E_r, E_z]
 
-slik at
+so that
 
     T = cᴱ*S - transpose(e)*E
     D = e*S + εˢ*E
@@ -114,13 +114,13 @@ end
 """
     PZT5A(; TC=Float64, TE=TC, Tε=TC, Tρ=TC)
 
-Returnerer full 6mm PZT-5A-materialkonstanter. Typeparametrene er uavhengige:
-`TC` for elastisitet, `TE` for piezokobling, `Tε` for permittivitet og `Tρ`
-for massetetthet.
+Return full 6mm PZT-5A material constants. The type parameters are independent:
+`TC` for stiffness, `TE` for piezoelectric coupling, `Tε` for permittivity, and
+`Tρ` for mass density.
 
-Konstantene er i SI-enheter og følger PZT-5A-tallene brukt i Kocbach/FEMP:
-elastisitet i Pa, piezokobling i C/m^2, permittivitet i F/m og tetthet i
-kg/m^3.
+The constants use SI units and follow the PZT-5A values used in Kocbach/FEMP:
+stiffness in Pa, piezoelectric coupling in C/m^2, permittivity in F/m, and
+density in kg/m^3.
 """
 function PZT5A(; T=Float64, TC=T, TE=TC, Tε=TC, Tρ=TC)
     c11 = TC(12.1e10)
@@ -167,7 +167,7 @@ end
 """
     reduce_material(material, formulation)
 
-Eksplisitt reduksjon fra full materialmodell til formuleringens feltbasis.
+Explicit reduction from the full material model to the formulation field basis.
 """
 reduce_material(material::Piezo6mmAxi, ::AxisymmetricRZ) = material
 

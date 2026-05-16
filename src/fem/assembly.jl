@@ -1,14 +1,15 @@
 """
     assemble_k_form_dense(grid, material, formulation, ip, qr)
 
-Assembler tette globale K-form-blokker for en piezoelektrisk struktur i vakuum.
-Dette er en liten referansebane for tester og algebraisk verifikasjon.
+Assemble dense global K-form blocks for a piezoelectric structure in vacuum.
+This is a small reference path for tests and algebraic verification.
 
-- Ferrite-delen (`DofHandler`, `CellValues`, `CellIterator`) håndterer mesh,
-  interpolasjon, DOF-nummerering og Gauss-integrasjon.
-- Fysikkdelen (`piezo_element_matrices`) lager Kocbachs lokale elementblokker.
-- Adapterdelen (`KFormAssembly`) bevarer mappingen fra Ferrite-DOF-er til
-  kompakte Kocbach-blokker.
+- The Ferrite part (`DofHandler`, `CellValues`, `CellIterator`) handles mesh,
+  interpolation, DOF numbering, and Gauss integration.
+- The physics part (`piezo_element_matrices`) builds Kocbach's local element
+  blocks.
+- The adapter part (`KFormAssembly`) preserves the mapping from Ferrite DOFs to
+  compact Kocbach blocks.
 """
 function assemble_k_form_dense(grid, material::Piezo6mmAxi, formulation::AxisymmetricRZ, ip, qr)
     dh = piezo_dofhandler(grid, ip)
@@ -72,8 +73,8 @@ end
 """
     assemble_k_form_sparse(grid, material, formulation, ip, qr)
 
-Assembler sparse globale K-form-blokker med triplet-oppsamling. Repeatede
-elementbidrag koaleseres av `sparse(I, J, V, m, n)`.
+Assemble sparse global K-form blocks with triplet collection. Repeated element
+contributions are coalesced by `sparse(I, J, V, m, n)`.
 """
 function assemble_k_form_sparse(grid, material::Piezo6mmAxi, formulation::AxisymmetricRZ, ip, qr)
     dh = piezo_dofhandler(grid, ip)
