@@ -1,0 +1,30 @@
+# Julia
+*.ji
+*.cov
+*.mem
+Manifest.toml
+
+# Build / generated files
+build/
+dist/
+*.vtk
+*.vtu
+*.pvtu
+*.pvd
+*.xdmf
+*.h5
+*.jld2
+*.csv
+
+# Docs/build artifacts
+docs/build/
+*.pdf
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# OS / editor
+.DS_Store
+.vscode/
