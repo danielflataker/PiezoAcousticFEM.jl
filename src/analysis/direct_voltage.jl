@@ -142,6 +142,8 @@ end
 
 function direct_voltage_observables(reduced::ElectrodeReducedKForm, u, ϕᵢ, voltage, ω)
     ϕ = reconstruct_potential(reduced, ϕᵢ, voltage)
+    # Evaluate the removed driven-electrode row as a reaction equation. With
+    # the Kocbach/KLV sign convention this reaction is minus the terminal charge.
     charge = -(sum(reduced.KPu .* u) + sum(reduced.KPi .* ϕᵢ) + reduced.KPP * voltage)
     current = im * ω * charge
     admittance = current / voltage

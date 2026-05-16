@@ -5,6 +5,11 @@ K-form where grounded potential DOFs have been removed and all DOFs on the
 driven electrode have been collapsed to one scalar potential `V`. The unknowns
 in the free part are `u` and the internal potentials `ϕᵢ`; electrode columns
 and rows are stored separately so a direct voltage solve can set `V = V0`.
+
+`KuP` and `KiP` are the prescribed-voltage columns that move to the active
+solve right-hand side. `KPu`, `KPi`, and `KPP` are the removed driven-electrode
+row after electrode tying; after the active solve, that row is evaluated as the
+reaction equation used to recover terminal charge.
 """
 struct ElectrodeReducedKForm{
     KUU<:AbstractMatrix,
@@ -37,7 +42,8 @@ end
 
 Collapse the driven electrode in a `KFormSystem` without condensing internal
 electrical DOFs. Matrix blocks may be dense reference matrices or sparse
-production matrices.
+production matrices. The returned reduction keeps active solve blocks and the
+driven-electrode reaction row separate.
 """
 function electrode_reduced_k_form(system::KFormSystem, partition::HarmonicVoltageDofPartition)
     validate_partition(system, partition)

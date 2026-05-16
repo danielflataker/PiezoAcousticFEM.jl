@@ -397,10 +397,12 @@ end
     direct = solve_direct_voltage(reduced, ω, V0)
     D = h.Huu - ω^2 * h.Muu
     u_h = D \ (-h.Huϕ * V0)
-    Q_h = -(only(h.Hϕu * u_h) + h.Hϕϕ * V0)
+    removed_electrode_row_residual = only(h.Hϕu * u_h) + h.Hϕϕ * V0
+    Q_h = -removed_electrode_row_residual
     Y_h = im * ω * Q_h / V0
 
     @test direct.displacement ≈ u_h
+    @test direct.charge ≈ -removed_electrode_row_residual
     @test direct.charge ≈ Q_h
     @test direct.current ≈ im * ω * Q_h
     @test direct.admittance ≈ Y_h
@@ -427,15 +429,17 @@ end
     manual_x = reconstruct_solution(manual_reduction, manual_reduction.A \ manual_reduction.b)
     manual_u = manual_x[1:2]
     manual_ϕᵢ = manual_x[3:3]
-    manual_charge = -(
+    manual_reaction_residual = (
         sum(reduced.KPu .* manual_u) +
         sum(reduced.KPi .* manual_ϕᵢ) +
         reduced.KPP * V0
     )
+    manual_charge = -manual_reaction_residual
 
     @test constrained_direct.displacement ≈ manual_u
     @test constrained_direct.internal_potential ≈ manual_ϕᵢ
     @test constrained_direct.displacement[1] == 0.25
+    @test constrained_direct.charge ≈ -manual_reaction_residual
     @test constrained_direct.charge ≈ manual_charge
     @test constrained_direct.current ≈ im * ω * manual_charge
     @test constrained_direct.admittance ≈ im * ω * manual_charge / V0
@@ -465,7 +469,9 @@ end
     ω = 2π * 10_000.0
     V0 = 2.0
     solution = solve_direct_voltage(reduced, ω, V0)
+    removed_electrode_row_residual = reduced.KPP * V0
 
+    @test removed_electrode_row_residual ≈ -C * V0
     @test solution.charge ≈ C * V0
     @test solution.current ≈ im * ω * C * V0
     @test solution.admittance ≈ im * ω * C
