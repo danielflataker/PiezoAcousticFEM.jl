@@ -28,9 +28,10 @@ end
     ShortCircuitModalResult
 
 Eigenpairs and metadata for `solve(problem, ::ShortCircuitModalAnalysis)`.
-Modes are stored as full compact displacement vectors and are mass-normalized.
+Modes are stored as full compact displacement vectors. `normalization` records
+the convention used for the columns of `modes`.
 """
-struct ShortCircuitModalResult{P,A,AP,R,Λ,W,F,M}
+struct ShortCircuitModalResult{P,A,AP,R,Λ,W,F,M,N}
     problem::P
     analysis::A
     assembled::AP
@@ -39,6 +40,7 @@ struct ShortCircuitModalResult{P,A,AP,R,Λ,W,F,M}
     angular_frequencies::W
     frequencies::F
     modes::M
+    normalization::N
 end
 
 
@@ -82,7 +84,7 @@ function solve(problem::PiezoProblem, analysis::ShortCircuitModalAnalysis)
     ω = sqrt.(max.(λ, zero(eltype(λ))))
     f = ω ./ (2π)
 
-    return ShortCircuitModalResult(problem, analysis, assembled, reduction, λ, ω, f, modes)
+    return ShortCircuitModalResult(problem, analysis, assembled, reduction, λ, ω, f, modes, :mass)
 end
 
 

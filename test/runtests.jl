@@ -672,6 +672,7 @@ end
     @test length(result.eigenvalues) == 4
     @test issorted(result.eigenvalues)
     @test minimum(result.eigenvalues) >= -1.0e-10 * maximum(abs, result.eigenvalues)
+    @test result.normalization == :mass
     @test size(result.modes) == (length(result.assembled.assembly.dofmap.u_dofs), 4)
     @test result.modes[result.reduction.mechanical_dirichlet.indices, :] ≈
         zeros(length(result.reduction.mechanical_dirichlet.indices), 4)
@@ -687,6 +688,15 @@ end
             abs(result.eigenvalues[j]) * opnorm(Mff, Inf) * norm(free_mode)
         @test norm(residual) <= 1.0e-8 * max(scale, 1.0)
     end
+
+    fields = reconstruct_fields(result, 1)
+    @test length(fields.displacement) == getnnodes(grid)
+    @test length(fields.potential) == getnnodes(grid)
+    @test fields.eigenvalue == result.eigenvalues[1]
+    @test fields.angular_frequency == result.angular_frequencies[1]
+    @test fields.frequency == result.frequencies[1]
+    @test fields.normalization == :mass
+    @test_throws ArgumentError reconstruct_fields(result, 0)
 end
 
 @testset "VTK solution output" begin
@@ -720,5 +730,38 @@ end
     @test length(fields.displacement) == getnnodes(grid)
     @test length(fields.potential) == getnnodes(grid)
     @test length(fields.radius) == getnnodes(grid)
+    rm(filename; force=true)
+end
+
+@testset "VTK modal output" begin
+    kin = AxisymmetricRZ()
+    mat = PZT5A()
+    ip = Lagrange{RefQuadrilateral,1}()
+    qr = QuadratureRule{RefQuadrilateral}(2)
+    grid = generate_grid(
+        Quadrilateral,
+        (2, 2),
+        Vec{2}((0.0, 0.0)),
+        Vec{2}((1.0e-3, 1.0e-3)),
+    )
+    problem = PiezoProblem(
+        grid,
+        mat,
+        kin,
+        ip,
+        qr;
+        electrodes=TwoTerminalElectrodes(FacetElectrode("top"), FacetElectrode("bottom")),
+        boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
+        loss=Lossless(),
+    )
+    result = solve(problem, ShortCircuitModalAnalysis(2))
+    basename = tempname()
+    fields = reconstruct_fields(result, 1)
+    filename = write_vtk(basename, grid, fields)
+
+    @test isfile(filename)
+    @test length(fields.displacement) == getnnodes(grid)
+    @test length(fields.potential) == getnnodes(grid)
+
     rm(filename; force=true)
 end
