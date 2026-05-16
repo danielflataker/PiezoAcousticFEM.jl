@@ -1,0 +1,203 @@
+@testset "axisymmetric direct voltage workflow smoke test" begin
+    kin = AxisymmetricRZ()
+    mat = PZT5A()
+    ip = Lagrange{RefQuadrilateral,1}()
+    qr = QuadratureRule{RefQuadrilateral}(2)
+    grid = generate_grid(
+        Quadrilateral,
+        (8, 12),
+        Vec{2}((0.0, 0.0)),
+        Vec{2}((4.0e-3, 6.0e-3)),
+    )
+
+    analysis = HarmonicVoltageAnalysis(2π * 10_000.0, 1.0, :exp_iomega_t)
+    problem = PiezoProblem(
+        grid,
+        mat,
+        kin,
+        ip,
+        qr;
+        electrodes=TwoTerminalElectrodes(FacetElectrode("top"), FacetElectrode("bottom")),
+        boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
+        loss=Lossless(),
+    )
+    assembled = assemble(problem)
+    reduction = reduce(assembled, analysis)
+    result = solve(problem, analysis)
+
+    @test problem.material_source === mat
+    @test problem.loss isa Lossless
+    @test problem.electrodes.signal isa FacetElectrode
+    @test problem.electrodes.reference isa FacetElectrode
+    @test only(problem.boundary_conditions.mechanical) isa AxisBoundary
+    @test assembled.problem === problem
+    @test assembled.material isa Piezo6mmAxi
+    @test reduction.assembled === assembled
+    @test reduction.reduced isa ElectrodeReducedKForm
+    @test result isa HarmonicVoltageResult
+    @test result.reduction.assembled.problem === problem
+    @test issparse(result.assembled.assembly.system.Kuu)
+    @test issparse(result.assembled.assembly.system.Kuϕ)
+    @test issparse(result.assembled.assembly.system.Kϕu)
+    @test issparse(result.assembled.assembly.system.Kϕϕ)
+    @test issparse(result.assembled.assembly.system.Muu)
+    @test length(result.reduction.partition.internal) > 0
+    @test !isempty(result.reduction.partition.driven)
+    @test !isempty(result.reduction.partition.grounded)
+    @test isempty(intersect(result.reduction.partition.driven, result.reduction.partition.grounded))
+    @test !isempty(result.reduction.mechanical_dirichlet.indices)
+    @test result.solution.displacement[result.reduction.mechanical_dirichlet.indices] ==
+        result.reduction.mechanical_dirichlet.values
+    @test result.solution.potential[result.reduction.partition.driven] ==
+        ones(length(result.reduction.partition.driven))
+    @test result.solution.potential[result.reduction.partition.grounded] ==
+        zeros(length(result.reduction.partition.grounded))
+    @test all(isfinite, result.solution.displacement)
+    @test all(isfinite, result.solution.potential)
+    @test isfinite(result.solution.charge)
+    @test isfinite(result.solution.current)
+    @test isfinite(result.solution.admittance)
+    @test result.problem === problem
+    @test result.analysis === analysis
+    @test result.solution.analysis === analysis
+    @test result.solution.convention == analysis.convention
+    explicit_solution = solve_direct_voltage(
+        reduction.reduced,
+        analysis.ω,
+        analysis.voltage;
+        mechanical_dirichlet=reduction.mechanical_dirichlet,
+        analysis,
+        convention=analysis.convention,
+    )
+    @test result.solution.admittance ≈ explicit_solution.admittance
+end
+
+@testset "short-circuit modal dense reference" begin
+    kin = AxisymmetricRZ()
+    mat = PZT5A()
+    ip = Lagrange{RefQuadrilateral,1}()
+    qr = QuadratureRule{RefQuadrilateral}(2)
+    grid = generate_grid(
+        Quadrilateral,
+        (2, 2),
+        Vec{2}((0.0, 0.0)),
+        Vec{2}((1.0e-3, 1.0e-3)),
+    )
+    problem = PiezoProblem(
+        grid,
+        mat,
+        kin,
+        ip,
+        qr;
+        electrodes=TwoTerminalElectrodes(FacetElectrode("top"), FacetElectrode("bottom")),
+        boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
+        loss=Lossless(),
+    )
+    analysis = ShortCircuitModalAnalysis(4)
+    result = solve(problem, analysis)
+
+    K = result.reduction.system.Kuu
+    M = result.reduction.system.Muu
+    free = result.reduction.free_dofs
+
+    @test result isa ShortCircuitModalResult
+    @test result.assembled.problem === problem
+    @test result.reduction.partition isa ShortCircuitDofPartition
+    @test sort(vcat(result.reduction.partition.internal, result.reduction.partition.grounded)) ==
+        collect(1:result.reduction.partition.nϕ)
+    @test length(result.eigenvalues) == 4
+    @test issorted(result.eigenvalues)
+    @test minimum(result.eigenvalues) >= -1.0e-10 * maximum(abs, result.eigenvalues)
+    @test result.normalization == :mass
+    @test size(result.modes) == (length(result.assembled.assembly.dofmap.u_dofs), 4)
+    @test result.modes[result.reduction.mechanical_dirichlet.indices, :] ≈
+        zeros(length(result.reduction.mechanical_dirichlet.indices), 4)
+
+    Kff = K[free, free]
+    Mff = M[free, free]
+    for j in axes(result.modes, 2)
+        mode = result.modes[:, j]
+        free_mode = mode[free]
+        @test dot(mode, M * mode) ≈ 1.0 atol = 1.0e-8
+        residual = Kff * free_mode - result.eigenvalues[j] * Mff * free_mode
+        scale = opnorm(Kff, Inf) * norm(free_mode) +
+            abs(result.eigenvalues[j]) * opnorm(Mff, Inf) * norm(free_mode)
+        @test norm(residual) <= 1.0e-8 * max(scale, 1.0)
+    end
+
+    fields = reconstruct_fields(result, 1)
+    @test length(fields.displacement) == getnnodes(grid)
+    @test length(fields.potential) == getnnodes(grid)
+    @test fields.eigenvalue == result.eigenvalues[1]
+    @test fields.angular_frequency == result.angular_frequencies[1]
+    @test fields.frequency == result.frequencies[1]
+    @test fields.normalization == :mass
+    @test_throws ArgumentError reconstruct_fields(result, 0)
+end
+
+@testset "VTK solution output" begin
+    kin = AxisymmetricRZ()
+    mat = PZT5A()
+    ip = Lagrange{RefQuadrilateral,1}()
+    qr = QuadratureRule{RefQuadrilateral}(2)
+    grid = generate_grid(
+        Quadrilateral,
+        (2, 2),
+        Vec{2}((0.0, 0.0)),
+        Vec{2}((1.0e-3, 1.0e-3)),
+    )
+    problem = PiezoProblem(
+        grid,
+        mat,
+        kin,
+        ip,
+        qr;
+        electrodes=TwoTerminalElectrodes(FacetElectrode("top"), FacetElectrode("bottom")),
+        boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
+        loss=Lossless(),
+    )
+    run = solve(problem, HarmonicVoltageAnalysis(2π * 10_000.0, 1.0, :exp_iomega_t))
+    basename = tempname()
+    fields = reconstruct_fields(run)
+    filename = write_vtk(basename, grid, fields)
+
+    @test isfile(filename)
+    @test filesize(filename) > 0
+    @test length(fields.displacement) == getnnodes(grid)
+    @test length(fields.potential) == getnnodes(grid)
+    @test length(fields.radius) == getnnodes(grid)
+    rm(filename; force=true)
+end
+
+@testset "VTK modal output" begin
+    kin = AxisymmetricRZ()
+    mat = PZT5A()
+    ip = Lagrange{RefQuadrilateral,1}()
+    qr = QuadratureRule{RefQuadrilateral}(2)
+    grid = generate_grid(
+        Quadrilateral,
+        (2, 2),
+        Vec{2}((0.0, 0.0)),
+        Vec{2}((1.0e-3, 1.0e-3)),
+    )
+    problem = PiezoProblem(
+        grid,
+        mat,
+        kin,
+        ip,
+        qr;
+        electrodes=TwoTerminalElectrodes(FacetElectrode("top"), FacetElectrode("bottom")),
+        boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
+        loss=Lossless(),
+    )
+    result = solve(problem, ShortCircuitModalAnalysis(2))
+    basename = tempname()
+    fields = reconstruct_fields(result, 1)
+    filename = write_vtk(basename, grid, fields)
+
+    @test isfile(filename)
+    @test length(fields.displacement) == getnnodes(grid)
+    @test length(fields.potential) == getnnodes(grid)
+
+    rm(filename; force=true)
+end
