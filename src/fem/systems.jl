@@ -24,7 +24,3 @@ struct KFormSystem{
     Kϕϕ::KPP
     Muu::MUU
 end
-
-
-KFormSystem(elem::PiezoElementMatrices) =
-    KFormSystem(elem.Kuu, elem.Kuϕ, elem.Kϕu, elem.Kϕϕ, elem.Muu)

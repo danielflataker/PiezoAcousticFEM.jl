@@ -21,9 +21,6 @@ struct DirichletDofs{T}
 end
 
 
-DirichletDofs(indices, value::Number) = DirichletDofs(indices, fill(value, length(indices)))
-
-
 """
     DirichletReduction
 

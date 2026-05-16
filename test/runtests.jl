@@ -110,7 +110,7 @@ end
 
     @test_throws ArgumentError DirichletDofs([1, 1], [0.0, 1.0])
     @test_throws DimensionMismatch DirichletDofs([1], [0.0, 1.0])
-    @test_throws ArgumentError apply_dirichlet(A, b, DirichletDofs([4], 0.0))
+    @test_throws ArgumentError apply_dirichlet(A, b, DirichletDofs([4], [0.0]))
 end
 
 @testset "axisymmetric geometry guards" begin
@@ -415,7 +415,7 @@ end
     @test direct.potential[partition.grounded] == zeros(length(partition.grounded))
     @test solve_direct_voltage(reduced, ω, V0).admittance ≈ Y_h
 
-    mechanical_dirichlet = DirichletDofs([1], 0.25)
+    mechanical_dirichlet = DirichletDofs([1], [0.25])
     constrained_direct =
         solve_direct_voltage(reduced, ω, V0; mechanical_dirichlet)
     A = [
@@ -447,7 +447,7 @@ end
         reduced,
         ω,
         V0;
-        mechanical_dirichlet=DirichletDofs([3], 0.0),
+        mechanical_dirichlet=DirichletDofs([3], [0.0]),
     )
 end
 
@@ -574,7 +574,7 @@ end
         Vec{2}((4.0e-3, 6.0e-3)),
     )
 
-    analysis = HarmonicVoltageAnalysis(2π * 10_000.0, 1.0)
+    analysis = HarmonicVoltageAnalysis(2π * 10_000.0, 1.0, :exp_iomega_t)
     problem = PiezoProblem(
         grid,
         mat,
@@ -657,7 +657,7 @@ end
         boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
         loss=Lossless(),
     )
-    analysis = ShortCircuitModalAnalysis(; nev=4)
+    analysis = ShortCircuitModalAnalysis(4)
     result = solve(problem, analysis)
 
     K = result.reduction.system.Kuu
@@ -710,7 +710,7 @@ end
         boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
         loss=Lossless(),
     )
-    run = solve(problem, HarmonicVoltageAnalysis(2π * 10_000.0, 1.0))
+    run = solve(problem, HarmonicVoltageAnalysis(2π * 10_000.0, 1.0, :exp_iomega_t))
     basename = tempname()
     fields = reconstruct_fields(run)
     filename = write_vtk(basename, grid, fields)

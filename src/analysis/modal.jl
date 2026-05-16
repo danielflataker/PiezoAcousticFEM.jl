@@ -1,14 +1,13 @@
 """
-    ShortCircuitModalAnalysis(; nev=nothing)
+    ShortCircuitModalAnalysis(nev)
 
 Lossless short-circuit modal reference analysis. This first implementation is
-dense and intended for small verification meshes.
+dense and intended for small verification meshes. Use `nothing` to keep all
+modes.
 """
 struct ShortCircuitModalAnalysis{N}
     nev::N
 end
-
-ShortCircuitModalAnalysis(; nev=nothing) = ShortCircuitModalAnalysis(nev)
 
 
 """

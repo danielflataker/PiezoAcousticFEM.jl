@@ -53,7 +53,7 @@ end
 
 
 """
-    HarmonicVoltageAnalysis(ω, voltage; convention=:exp_iomega_t)
+    HarmonicVoltageAnalysis(ω, voltage, convention)
 
 Direkte harmonisk spenningsanalyse. `convention` beskriver tidskonvensjonen
 som brukes ved admittans- og fasepostprosessering.
@@ -63,10 +63,6 @@ struct HarmonicVoltageAnalysis{W,V,C}
     voltage::V
     convention::C
 end
-
-
-HarmonicVoltageAnalysis(ω, voltage; convention=:exp_iomega_t) =
-    HarmonicVoltageAnalysis(ω, voltage, convention)
 
 
 """
@@ -125,19 +121,16 @@ function reduce(
     analysis::HarmonicVoltageAnalysis,
 )
     problem = assembled.problem
-    partition = potential_partition(assembled.assembly, problem.electrodes, analysis)
+    partition = potential_partition(
+        assembled.assembly;
+        driven=problem.electrodes.signal,
+        grounded=problem.electrodes.reference,
+    )
     reduced = electrode_reduced_k_form(assembled.assembly.system, partition)
     constraints = mechanical_dirichlet(assembled.assembly, problem.boundary_conditions)
 
     return HarmonicVoltageReduction(assembled, partition, reduced, constraints)
 end
-
-
-potential_partition(
-    assembly::KFormAssembly,
-    electrodes::TwoTerminalElectrodes,
-    ::HarmonicVoltageAnalysis,
-) = potential_partition(assembly; driven=electrodes.signal, grounded=electrodes.reference)
 
 
 """

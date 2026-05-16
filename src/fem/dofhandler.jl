@@ -72,7 +72,7 @@ function axis_radial_displacement_constraint(assembly::KFormAssembly; axis::Axis
     axis_facets = _resolve_facetset(grid, axis)
     indices = displacement_component_dofs_on_facets(assembly, axis_facets, :r)
 
-    return DirichletDofs(indices, value)
+    return DirichletDofs(indices, fill(value, length(indices)))
 end
 
 
@@ -124,14 +124,14 @@ container. Returns `nothing` when no mechanical constraints are present.
 """
 function mechanical_dirichlet(assembly::KFormAssembly, bcs::AxisymmetricBoundaryConditions)
     constraints = [
-        mechanical_dirichlet(assembly, bc)
+        _mechanical_dirichlet(assembly, bc)
         for bc in bcs.mechanical
     ]
 
     return combine_dirichlet_dofs(constraints)
 end
 
-mechanical_dirichlet(assembly::KFormAssembly, axis::AxisBoundary) =
+_mechanical_dirichlet(assembly::KFormAssembly, axis::AxisBoundary) =
     axis_radial_displacement_constraint(assembly; axis)
 
 function combine_dirichlet_dofs(constraints)
