@@ -22,7 +22,7 @@
         loss=Lossless(),
     )
     assembled = assemble(problem)
-    reduction = reduce(assembled, analysis)
+    reduction = prepare_analysis(assembled, analysis)
     result = solve(problem, analysis)
 
     @test problem.material_source === mat

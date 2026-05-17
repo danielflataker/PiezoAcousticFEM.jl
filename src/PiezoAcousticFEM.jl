@@ -8,8 +8,6 @@ using SparseArrays
 using StaticArrays
 using WriteVTK
 
-import Base: reduce
-
 include("physics/formulations.jl")
 include("physics/materials.jl")
 include("physics/constitutive.jl")
@@ -44,7 +42,7 @@ export NoSystemDamping
 export FacetElectrode, TwoTerminalElectrodes
 export FacetBoundary, AxisBoundary, AxisymmetricBoundaryConditions
 export PiezoProblem, AssembledPiezoProblem, HarmonicVoltageAnalysis, ShortCircuitModalAnalysis
-export solve, assemble, reduce
+export solve, assemble, prepare_analysis
 export HarmonicVoltageResult, ShortCircuitModalResult
 export AbstractObservable, AdmittanceObservable, ChargeObservable, CurrentObservable
 export ModalFrequenciesObservable, evaluate

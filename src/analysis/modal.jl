@@ -47,7 +47,7 @@ struct ShortCircuitModalResult{P,A,AP,R,Λ,W,F,M,N}
 end
 
 
-function reduce(
+function prepare_analysis(
     assembled::AssembledPiezoProblem,
     ::ShortCircuitModalAnalysis,
 )
@@ -70,7 +70,7 @@ end
 function solve(problem::PiezoProblem, analysis::ShortCircuitModalAnalysis)
     check_supported(problem.loss, analysis)
     assembled = assemble(problem)
-    reduction = reduce(assembled, analysis)
+    reduction = prepare_analysis(assembled, analysis)
     constrained = apply_modal_constraints(
         reduction.system.Kuu,
         reduction.system.Muu,

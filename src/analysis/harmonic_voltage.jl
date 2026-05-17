@@ -122,11 +122,11 @@ end
 
 
 """
-    reduce(assembled, analysis)
+    prepare_analysis(assembled, analysis)
 
 Build the analysis-specific electrode and mechanical reductions.
 """
-function reduce(
+function prepare_analysis(
     assembled::AssembledPiezoProblem,
     analysis::HarmonicVoltageAnalysis,
 )
@@ -146,12 +146,12 @@ end
 """
     solve(problem, analysis)
 
-Assemble, reduce, and solve a `PiezoProblem` for the given analysis.
+Assemble, prepare, and solve a `PiezoProblem` for the given analysis.
 """
 function solve(problem::PiezoProblem, analysis::HarmonicVoltageAnalysis)
     check_supported(problem.loss, analysis)
     assembled = assemble(problem)
-    reduction = reduce(assembled, analysis)
+    reduction = prepare_analysis(assembled, analysis)
     solution = solve_direct_voltage(
         reduction.reduced,
         analysis.ω,
