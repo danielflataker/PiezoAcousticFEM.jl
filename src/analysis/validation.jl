@@ -7,6 +7,25 @@ electric potential on a 2D axisymmetric `r-z` grid.
 """
 function validate(problem::PiezoProblem)
     validate_supported_discretization(problem)
+    validate_boundary_semantics(problem)
+
+    return nothing
+end
+
+
+function validate_boundary_semantics(problem::PiezoProblem)
+    grid = problem.grid
+    interpolation = problem.interpolation
+    tol = _geometry_tolerance(grid)
+
+    signal = _validate_electrode(grid, interpolation, problem.electrodes.signal, "signal electrode", tol)
+    reference = _validate_electrode(grid, interpolation, problem.electrodes.reference, "reference electrode", tol)
+    isempty(intersect(signal, reference)) ||
+        throw(ArgumentError("signal and reference electrodes must use disjoint facets"))
+
+    for (i, boundary) in pairs(problem.boundary_conditions.mechanical)
+        _validate_mechanical_boundary(grid, interpolation, boundary, "mechanical boundary $i", tol)
+    end
 
     return nothing
 end
@@ -20,7 +39,7 @@ function validate_supported_discretization(problem::PiezoProblem)
     getncells(grid) > 0 ||
         throw(ArgumentError("unsupported discretization: grid must contain at least one cell"))
 
-    _coordinate_dimension(grid) == 2 ||
+    Ferrite.getspatialdim(grid) == 2 ||
         throw(ArgumentError("unsupported discretization: axisymmetric r-z models require 2D node coordinates"))
 
     _is_lagrange_interpolation(interpolation) ||
@@ -54,14 +73,90 @@ function validate_supported_discretization(problem::PiezoProblem)
 end
 
 
-function _coordinate_dimension(grid)
-    nodes = getnodes(grid)
-    isempty(nodes) &&
-        throw(ArgumentError("unsupported discretization: grid must contain at least one node"))
+_is_lagrange_interpolation(::Lagrange) = true
+_is_lagrange_interpolation(_) = false
 
-    return length(first(nodes).x)
+
+function _validate_electrode(grid, interpolation, electrode::FacetElectrode, label::AbstractString, tol)
+    facetset = _validated_facetset(grid, electrode, label)
+    measure = _facetset_measure(grid, interpolation, facetset)
+    measure > tol ||
+        throw(ArgumentError("$label must have nonzero boundary measure; observed measure=$measure with tolerance=$tol"))
+
+    return facetset
 end
 
 
-_is_lagrange_interpolation(::Lagrange) = true
-_is_lagrange_interpolation(_) = false
+function _validate_mechanical_boundary(grid, interpolation, boundary::AxisBoundary, label::AbstractString, tol)
+    facetset = _validated_facetset(grid, boundary, label)
+    rmin, rmax = _facetset_radius_range(grid, interpolation, facetset)
+    max(abs(rmin), abs(rmax)) <= tol ||
+        throw(ArgumentError(
+            "$label must lie on the axis r=0; observed r range=[$rmin, $rmax] with tolerance=$tol",
+        ))
+
+    return nothing
+end
+
+
+function _validated_facetset(grid, boundary_or_electrode, label::AbstractString)
+    facetset = try
+        _resolve_facetset(grid, boundary_or_electrode)
+    catch err
+        err isa KeyError || rethrow()
+        throw(ArgumentError("$label facet set $(err.key) does not exist"))
+    end
+
+    isempty(facetset) &&
+        throw(ArgumentError("$label facet set must contain at least one facet"))
+
+    return facetset
+end
+
+
+function _facetset_measure(grid, interpolation, facetset)
+    measure = zero(eltype(first(getnodes(grid)).x))
+    facet_dofs = Ferrite.dirichlet_facetdof_indices(interpolation)
+
+    for facet in facetset
+        cellid, facetid = facet.idx
+        cell = getcells(grid, cellid)
+        facet_nodes = cell.nodes[collect(facet_dofs[facetid])]
+        x1 = Ferrite.get_node_coordinate(grid, first(facet_nodes))
+        x2 = Ferrite.get_node_coordinate(grid, last(facet_nodes))
+        measure += norm(x2 - x1)
+    end
+
+    return measure
+end
+
+
+function _facetset_radius_range(grid, interpolation, facetset)
+    rmin = Inf
+    rmax = -Inf
+    facet_dofs = Ferrite.dirichlet_facetdof_indices(interpolation)
+
+    for facet in facetset
+        cellid, facetid = facet.idx
+        cell = getcells(grid, cellid)
+
+        for nodeid in cell.nodes[collect(facet_dofs[facetid])]
+            r = Ferrite.get_node_coordinate(grid, nodeid)[1]
+            rmin = min(rmin, r)
+            rmax = max(rmax, r)
+        end
+    end
+
+    return rmin, rmax
+end
+
+
+function _geometry_tolerance(grid)
+    scale = zero(eltype(first(getnodes(grid)).x))
+
+    for node in getnodes(grid)
+        scale = max(scale, maximum(abs, node.x))
+    end
+
+    return max(scale, one(scale)) * sqrt(eps(float(scale)))
+end

@@ -1,12 +1,18 @@
-function validation_test_problem(; grid, ip, qr)
+function validation_test_problem(;
+    grid,
+    ip,
+    qr,
+    electrodes=TwoTerminalElectrodes(FacetElectrode("top"), FacetElectrode("bottom")),
+    boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
+)
     return PiezoProblem(
         grid,
         PZT5A(),
         AxisymmetricRZ(),
         ip,
         qr;
-        electrodes=TwoTerminalElectrodes(FacetElectrode("top"), FacetElectrode("bottom")),
-        boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
+        electrodes,
+        boundary_conditions,
         loss=Lossless(),
     )
 end
@@ -38,4 +44,28 @@ end
         qr=QuadratureRule{RefTriangle}(2),
     )
     @test_throws ArgumentError validate(wrong_shape_problem)
+
+    missing_electrode_problem = validation_test_problem(;
+        grid,
+        ip,
+        qr,
+        electrodes=TwoTerminalElectrodes(FacetElectrode("missing"), FacetElectrode("bottom")),
+    )
+    @test_throws ArgumentError validate(missing_electrode_problem)
+
+    overlapping_electrodes_problem = validation_test_problem(;
+        grid,
+        ip,
+        qr,
+        electrodes=TwoTerminalElectrodes(FacetElectrode("top"), FacetElectrode("top")),
+    )
+    @test_throws ArgumentError validate(overlapping_electrodes_problem)
+
+    off_axis_problem = validation_test_problem(;
+        grid,
+        ip,
+        qr,
+        boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("right")),)),
+    )
+    @test_throws ArgumentError validate(off_axis_problem)
 end
