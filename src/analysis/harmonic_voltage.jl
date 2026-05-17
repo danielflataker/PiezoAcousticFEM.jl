@@ -109,6 +109,8 @@ end
 Build the formulation/loss-specific material and assemble the sparse K-form.
 """
 function assemble(problem::PiezoProblem)
+    validate(problem)
+
     material = effective_material(problem.material_source, problem.formulation, problem.loss)
     assembly = assemble_k_form_sparse(
         problem.grid,

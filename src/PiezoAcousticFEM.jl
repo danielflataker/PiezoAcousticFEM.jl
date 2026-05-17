@@ -30,6 +30,7 @@ include("boundary_conditions/electrode_reduction.jl")
 include("analysis/direct_voltage.jl")
 include("analysis/harmonic_voltage.jl")
 include("analysis/modal.jl")
+include("analysis/validation.jl")
 
 include("postprocessing/reconstruction.jl")
 include("postprocessing/observables.jl")
@@ -43,7 +44,7 @@ export NoSystemDamping
 export FacetElectrode, TwoTerminalElectrodes
 export FacetBoundary, AxisBoundary, AxisymmetricBoundaryConditions
 export PiezoProblem, HarmonicVoltageAnalysis, ShortCircuitModalAnalysis
-export solve, assemble, prepare_analysis
+export solve, assemble, prepare_analysis, validate
 export HarmonicVoltageResult, ShortCircuitModalResult
 export AbstractObservable, AdmittanceObservable, ChargeObservable, CurrentObservable
 export ModalFrequenciesObservable, evaluate
