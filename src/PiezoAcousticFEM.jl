@@ -41,7 +41,7 @@ export Lossless, PhysicalLoss, RealMaterial, MaterialAsGiven, PiezoComplexMateri
 export NoSystemDamping
 export FacetElectrode, TwoTerminalElectrodes
 export FacetBoundary, AxisBoundary, AxisymmetricBoundaryConditions
-export PiezoProblem, AssembledPiezoProblem, HarmonicVoltageAnalysis, ShortCircuitModalAnalysis
+export PiezoProblem, HarmonicVoltageAnalysis, ShortCircuitModalAnalysis
 export solve, assemble, prepare_analysis
 export HarmonicVoltageResult, ShortCircuitModalResult
 export AbstractObservable, AdmittanceObservable, ChargeObservable, CurrentObservable

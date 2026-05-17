@@ -43,7 +43,8 @@ end
 """
     AssembledPiezoProblem
 
-Problem plus effective material and assembled K-form blocks.
+Internal container returned by [`assemble`](@ref). It keeps `problem` as the
+single source of truth for later analysis preparation.
 """
 struct AssembledPiezoProblem{P,M,A}
     problem::P
