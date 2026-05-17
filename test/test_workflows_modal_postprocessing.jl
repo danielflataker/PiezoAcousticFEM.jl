@@ -33,7 +33,7 @@
     @test assembled.problem === problem
     @test assembled.material isa Piezo6mmAxi
     @test reduction.assembled === assembled
-    @test reduction.reduced isa ElectrodeReducedKForm
+    @test reduction.reduced isa PiezoAcousticFEM.ElectrodeReducedKForm
     @test result isa HarmonicVoltageResult
     @test result.reduction.assembled.problem === problem
     @test issparse(result.assembled.assembly.system.Kuu)
@@ -61,7 +61,7 @@
     @test result.analysis === analysis
     @test result.solution.analysis === analysis
     @test result.solution.convention == analysis.convention
-    explicit_solution = solve_direct_voltage(
+    explicit_solution = PiezoAcousticFEM.solve_direct_voltage(
         reduction.reduced,
         analysis.ω,
         analysis.voltage;
@@ -136,7 +136,7 @@ end
 
     @test result isa ShortCircuitModalResult
     @test result.assembled.problem === problem
-    @test result.reduction.partition isa ShortCircuitDofPartition
+    @test result.reduction.partition isa PiezoAcousticFEM.ShortCircuitDofPartition
     @test sort(vcat(result.reduction.partition.internal, result.reduction.partition.grounded)) ==
         collect(1:result.reduction.partition.nϕ)
     @test length(result.eigenvalues) == 4

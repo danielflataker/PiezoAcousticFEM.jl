@@ -9,9 +9,9 @@
     ]
     Muu = Matrix{Float64}(I, 2, 2)
 
-    system = KFormSystem(Kuu, Kuϕ, Kϕu, Kϕϕ, Muu)
-    partition = HarmonicVoltageDofPartition(3, [1], [2], [3])
-    h = h_form_dense(system, partition)
+    system = PiezoAcousticFEM.KFormSystem(Kuu, Kuϕ, Kϕu, Kϕϕ, Muu)
+    partition = PiezoAcousticFEM.HarmonicVoltageDofPartition(3, [1], [2], [3])
+    h = PiezoAcousticFEM.h_form_dense(system, partition)
 
     Kii = Kϕϕ[1:1, 1:1]
     @test h.Huu ≈ Kuu - Kuϕ[:, 1:1] * (Kii \ Kϕu[1:1, :])
@@ -36,9 +36,9 @@ end
     ]
     Muu = Float64[1.0 0.0; 0.0 1.0]
 
-    system = KFormSystem(Kuu, Kuϕ, Kϕu, Kϕϕ, Muu)
-    partition = HarmonicVoltageDofPartition(3, [1], [2], [3])
-    reduced = electrode_reduced_k_form(system, partition)
+    system = PiezoAcousticFEM.KFormSystem(Kuu, Kuϕ, Kϕu, Kϕϕ, Muu)
+    partition = PiezoAcousticFEM.HarmonicVoltageDofPartition(3, [1], [2], [3])
+    reduced = PiezoAcousticFEM.electrode_reduced_k_form(system, partition)
 
     @test eltype(reduced.Kuu) == ComplexF64
     @test eltype(reduced.KuP) == Float32
@@ -58,15 +58,15 @@ end
         0.0 0.0 -9.0
     ]
     Muu = Matrix{Float64}(I, 2, 2)
-    system = KFormSystem(Kuu, Kuϕ, Kϕu, Kϕϕ, Muu)
-    partition = HarmonicVoltageDofPartition(3, [1], [2], [3])
+    system = PiezoAcousticFEM.KFormSystem(Kuu, Kuϕ, Kϕu, Kϕϕ, Muu)
+    partition = PiezoAcousticFEM.HarmonicVoltageDofPartition(3, [1], [2], [3])
 
-    reduced = electrode_reduced_k_form(system, partition)
-    h = h_form_dense(system, partition)
+    reduced = PiezoAcousticFEM.electrode_reduced_k_form(system, partition)
+    h = PiezoAcousticFEM.h_form_dense(system, partition)
     ω = 3.0
     V0 = 2.5
 
-    direct = solve_direct_voltage(reduced, ω, V0)
+    direct = PiezoAcousticFEM.solve_direct_voltage(reduced, ω, V0)
     D = h.Huu - ω^2 * h.Muu
     u_h = D \ (-h.Huϕ * V0)
     removed_electrode_row_residual = only(h.Hϕu * u_h) + h.Hϕϕ * V0
@@ -87,18 +87,18 @@ end
     @test direct.potential[partition.internal] ≈ direct.internal_potential
     @test direct.potential[partition.driven] == fill(V0, length(partition.driven))
     @test direct.potential[partition.grounded] == zeros(length(partition.grounded))
-    @test solve_direct_voltage(reduced, ω, V0).admittance ≈ Y_h
+    @test PiezoAcousticFEM.solve_direct_voltage(reduced, ω, V0).admittance ≈ Y_h
 
-    mechanical_dirichlet = DirichletDofs([1], [0.25])
+    mechanical_dirichlet = PiezoAcousticFEM.DirichletDofs([1], [0.25])
     constrained_direct =
-        solve_direct_voltage(reduced, ω, V0; mechanical_dirichlet)
+        PiezoAcousticFEM.solve_direct_voltage(reduced, ω, V0; mechanical_dirichlet)
     A = [
         Kuu - ω^2 * Muu Kuϕ[:, 1:1]
         Kϕu[1:1, :] Kϕϕ[1:1, 1:1]
     ]
     rhs = -vcat(Kuϕ[:, 2:2], Kϕϕ[1:1, 2:2])[:, 1] * V0
-    manual_reduction = apply_dirichlet(A, rhs, mechanical_dirichlet)
-    manual_x = reconstruct_solution(manual_reduction, manual_reduction.A \ manual_reduction.b)
+    manual_reduction = PiezoAcousticFEM.apply_dirichlet(A, rhs, mechanical_dirichlet)
+    manual_x = PiezoAcousticFEM.reconstruct_solution(manual_reduction, manual_reduction.A \ manual_reduction.b)
     manual_u = manual_x[1:2]
     manual_ϕᵢ = manual_x[3:3]
     manual_reaction_residual = (
@@ -117,13 +117,13 @@ end
     @test constrained_direct.admittance ≈ im * ω * manual_charge / V0
     @test constrained_direct.solver_info.matrix_size == (2, 2)
     @test constrained_direct.solver_info.reduced_relative_residual < 1.0e-12
-    @test solve_direct_voltage(reduced, ω, V0; mechanical_dirichlet).admittance ≈
+    @test PiezoAcousticFEM.solve_direct_voltage(reduced, ω, V0; mechanical_dirichlet).admittance ≈
         constrained_direct.admittance
-    @test_throws ArgumentError solve_direct_voltage(
+    @test_throws ArgumentError PiezoAcousticFEM.solve_direct_voltage(
         reduced,
         ω,
         V0;
-        mechanical_dirichlet=DirichletDofs([3], [0.0]),
+        mechanical_dirichlet=PiezoAcousticFEM.DirichletDofs([3], [0.0]),
     )
 end
 
@@ -134,13 +134,13 @@ end
     Kϕu = zeros(1, 1)
     Kϕϕ = fill(-C, 1, 1)
     Muu = zeros(1, 1)
-    system = KFormSystem(Kuu, Kuϕ, Kϕu, Kϕϕ, Muu)
-    partition = HarmonicVoltageDofPartition(1, Int[], [1], Int[])
-    reduced = electrode_reduced_k_form(system, partition)
+    system = PiezoAcousticFEM.KFormSystem(Kuu, Kuϕ, Kϕu, Kϕϕ, Muu)
+    partition = PiezoAcousticFEM.HarmonicVoltageDofPartition(1, Int[], [1], Int[])
+    reduced = PiezoAcousticFEM.electrode_reduced_k_form(system, partition)
 
     ω = 2π * 10_000.0
     V0 = 2.0
-    solution = solve_direct_voltage(reduced, ω, V0)
+    solution = PiezoAcousticFEM.solve_direct_voltage(reduced, ω, V0)
     removed_electrode_row_residual = reduced.KPP * V0
 
     @test removed_electrode_row_residual ≈ -C * V0
@@ -160,26 +160,26 @@ end
         Vec{2}((1.0e-3, 0.0)),
         Vec{2}((2.0e-3, 2.0e-3)),
     )
-    dense_assembly = assemble_k_form_dense(grid, mat, kin, ip, qr)
-    sparse_assembly = assemble_k_form_sparse(grid, mat, kin, ip, qr)
-    partition = potential_partition(
+    dense_assembly = PiezoAcousticFEM.assemble_k_form_dense(grid, mat, kin, ip, qr)
+    sparse_assembly = PiezoAcousticFEM.assemble_k_form_sparse(grid, mat, kin, ip, qr)
+    partition = PiezoAcousticFEM.potential_partition(
         dense_assembly;
         driven=FacetElectrode("top"),
         grounded=FacetElectrode("bottom"),
     )
-    sparse_partition = potential_partition(
+    sparse_partition = PiezoAcousticFEM.potential_partition(
         sparse_assembly;
         driven=FacetElectrode("top"),
         grounded=FacetElectrode("bottom"),
     )
-    reduced = electrode_reduced_k_form(dense_assembly.system, partition)
-    sparse_reduced = electrode_reduced_k_form(sparse_assembly.system, sparse_partition)
-    h = h_form_dense(dense_assembly.system, partition)
+    reduced = PiezoAcousticFEM.electrode_reduced_k_form(dense_assembly.system, partition)
+    sparse_reduced = PiezoAcousticFEM.electrode_reduced_k_form(sparse_assembly.system, sparse_partition)
+    h = PiezoAcousticFEM.h_form_dense(dense_assembly.system, partition)
 
     ω = 2π * 10_000.0
     V0 = 1.25
-    direct = solve_direct_voltage(reduced, ω, V0)
-    sparse_direct = solve_direct_voltage(sparse_reduced, ω, V0)
+    direct = PiezoAcousticFEM.solve_direct_voltage(reduced, ω, V0)
+    sparse_direct = PiezoAcousticFEM.solve_direct_voltage(sparse_reduced, ω, V0)
     sparse_A, _ = PiezoAcousticFEM.build_direct_voltage_system(sparse_reduced, ω, V0)
     D = h.Huu - ω^2 * h.Muu
     u_h = D \ (-h.Huϕ * V0)
@@ -210,17 +210,17 @@ end
         Vec{2}((0.0, 0.0)),
         Vec{2}((1.0e-3, 2.0e-3)),
     )
-    assembly = assemble_k_form_sparse(grid, mat, kin, ip, qr)
-    partition = potential_partition(
+    assembly = PiezoAcousticFEM.assemble_k_form_sparse(grid, mat, kin, ip, qr)
+    partition = PiezoAcousticFEM.potential_partition(
         assembly;
         driven=FacetElectrode("top"),
         grounded=FacetElectrode("bottom"),
     )
-    reduced = electrode_reduced_k_form(assembly.system, partition)
+    reduced = PiezoAcousticFEM.electrode_reduced_k_form(assembly.system, partition)
     axis_constraint =
-        axis_radial_displacement_constraint(assembly; axis=AxisBoundary(FacetBoundary("left")))
+        PiezoAcousticFEM.axis_radial_displacement_constraint(assembly; axis=AxisBoundary(FacetBoundary("left")))
 
-    result = solve_direct_voltage(
+    result = PiezoAcousticFEM.solve_direct_voltage(
         reduced,
         2π * 10_000.0,
         1.0;

@@ -18,7 +18,7 @@
     reinit!(cellvalues_u, cell)
     reinit!(cellvalues_ϕ, cell)
 
-    elem = piezo_element_matrices(cellvalues_u, cellvalues_ϕ, getcoordinates(cell), mat, kin)
+    elem = PiezoAcousticFEM.piezo_element_matrices(cellvalues_u, cellvalues_ϕ, getcoordinates(cell), mat, kin)
 
     @test size(elem.Kuu) == (8, 8)
     @test size(elem.Kuϕ) == (8, 4)
@@ -37,9 +37,9 @@ end
     ip = Lagrange{RefQuadrilateral,1}()
     qr = QuadratureRule{RefQuadrilateral}(2)
 
-    @test_throws ArgumentError integration_weight(kin, Vec{2}((0.0, 0.0)), 1.0)
-    @test_throws ArgumentError integration_weight(kin, Vec{2}((1.0, 0.0)), 0.0)
-    @test_throws ArgumentError strain(kin, Vec{2}((1.0, 0.0)), zeros(2, 2), Vec{2}((0.0, 0.0)))
+    @test_throws ArgumentError PiezoAcousticFEM.integration_weight(kin, Vec{2}((0.0, 0.0)), 1.0)
+    @test_throws ArgumentError PiezoAcousticFEM.integration_weight(kin, Vec{2}((1.0, 0.0)), 0.0)
+    @test_throws ArgumentError PiezoAcousticFEM.strain(kin, Vec{2}((1.0, 0.0)), zeros(2, 2), Vec{2}((0.0, 0.0)))
 
     axis_touching_grid = generate_grid(
         Quadrilateral,
@@ -47,7 +47,7 @@ end
         Vec{2}((0.0, 0.0)),
         Vec{2}((1.0e-3, 1.0e-3)),
     )
-    axis_touching_assembly = assemble_k_form_sparse(axis_touching_grid, mat, kin, ip, qr)
+    axis_touching_assembly = PiezoAcousticFEM.assemble_k_form_sparse(axis_touching_grid, mat, kin, ip, qr)
     @test all(isfinite, axis_touching_assembly.system.Kuu)
 
     negative_radius_grid = generate_grid(
@@ -56,7 +56,7 @@ end
         Vec{2}((-1.0e-3, 0.0)),
         Vec{2}((1.0e-3, 1.0e-3)),
     )
-    @test_throws ArgumentError assemble_k_form_sparse(negative_radius_grid, mat, kin, ip, qr)
+    @test_throws ArgumentError PiezoAcousticFEM.assemble_k_form_sparse(negative_radius_grid, mat, kin, ip, qr)
 end
 
 @testset "dense global K-form assembly" begin
@@ -72,14 +72,14 @@ end
         Vec{2}((2.0e-3, 1.0e-3)),
     )
 
-    assembly = assemble_k_form_dense(one_cell_grid, mat, kin, ip, qr)
+    assembly = PiezoAcousticFEM.assemble_k_form_dense(one_cell_grid, mat, kin, ip, qr)
 
     cellvalues_u = CellValues(qr, ip)
     cellvalues_ϕ = CellValues(qr, ip)
     cell = first(CellIterator(one_cell_grid))
     reinit!(cellvalues_u, cell)
     reinit!(cellvalues_ϕ, cell)
-    elem = piezo_element_matrices(cellvalues_u, cellvalues_ϕ, getcoordinates(cell), mat, kin)
+    elem = PiezoAcousticFEM.piezo_element_matrices(cellvalues_u, cellvalues_ϕ, getcoordinates(cell), mat, kin)
 
     @test assembly.system.Kuu ≈ elem.Kuu
     @test assembly.system.Kuϕ ≈ elem.Kuϕ
@@ -94,7 +94,7 @@ end
         Vec{2}((3.0e-3, 1.0e-3)),
     )
 
-    two_cell_assembly = assemble_k_form_dense(two_cell_grid, mat, kin, ip, qr)
+    two_cell_assembly = PiezoAcousticFEM.assemble_k_form_dense(two_cell_grid, mat, kin, ip, qr)
     @test size(two_cell_assembly.system.Kuu) == (12, 12)
     @test size(two_cell_assembly.system.Kuϕ) == (12, 6)
     @test size(two_cell_assembly.system.Kϕu) == (6, 12)
@@ -117,8 +117,8 @@ end
         Vec{2}((2.0e-3, 2.0e-3)),
     )
 
-    dense = assemble_k_form_dense(grid, mat, kin, ip, qr)
-    sparse_assembly = assemble_k_form_sparse(grid, mat, kin, ip, qr)
+    dense = PiezoAcousticFEM.assemble_k_form_dense(grid, mat, kin, ip, qr)
+    sparse_assembly = PiezoAcousticFEM.assemble_k_form_sparse(grid, mat, kin, ip, qr)
 
     @test issparse(sparse_assembly.system.Kuu)
     @test issparse(sparse_assembly.system.Kuϕ)

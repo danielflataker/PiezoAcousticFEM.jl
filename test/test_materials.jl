@@ -80,7 +80,7 @@ end
     end
 
     complex_material = scaled_material(1.0 + 0.02im)
-    complex_assembly = assemble_k_form_dense(
+    complex_assembly = PiezoAcousticFEM.assemble_k_form_dense(
         grid,
         effective_material(
             complex_material,
@@ -91,12 +91,12 @@ end
         ip,
         qr,
     )
-    complex_partition = potential_partition(
+    complex_partition = PiezoAcousticFEM.potential_partition(
         complex_assembly;
         driven=FacetElectrode("top"),
         grounded=FacetElectrode("bottom"),
     )
-    complex_reduced = electrode_reduced_k_form(complex_assembly.system, complex_partition)
+    complex_reduced = PiezoAcousticFEM.electrode_reduced_k_form(complex_assembly.system, complex_partition)
 
     @test eltype(complex_assembly.system.Kuu) <: Complex
     @test eltype(complex_reduced.KuP) <: Complex
@@ -108,13 +108,13 @@ end
             kin,
             PhysicalLoss(MaterialAsGiven(), NoSystemDamping()),
         )
-        assembly = assemble_k_form_dense(grid, material, kin, ip, qr)
-        partition = potential_partition(
+        assembly = PiezoAcousticFEM.assemble_k_form_dense(grid, material, kin, ip, qr)
+        partition = PiezoAcousticFEM.potential_partition(
             assembly;
             driven=FacetElectrode("top"),
             grounded=FacetElectrode("bottom"),
         )
-        reduced = electrode_reduced_k_form(assembly.system, partition)
+        reduced = PiezoAcousticFEM.electrode_reduced_k_form(assembly.system, partition)
 
         return sum(reduced.Kuu) + sum(reduced.KuP) + reduced.KPP + sum(reduced.Muu)
     end
