@@ -57,7 +57,7 @@ function validate_supported_discretization(problem::PiezoProblem)
     for cellid in 1:getncells(grid)
         cell = getcells(grid, cellid)
         cell_shape = Ferrite.getrefshape(typeof(cell))
-        nnodes = length(cell.nodes)
+        nnodes = Ferrite.nnodes_per_cell(grid, cellid)
 
         cell_shape == ip_shape ||
             throw(ArgumentError(
@@ -115,16 +115,15 @@ end
 
 
 function _facetset_measure(grid, interpolation, facetset)
-    measure = zero(eltype(first(getnodes(grid)).x))
-    facet_dofs = Ferrite.dirichlet_facetdof_indices(interpolation)
+    T = eltype(Ferrite.get_node_coordinate(grid, 1))
+    measure = zero(T)
+    facetvalues = FacetValues(FacetQuadratureRule{Ferrite.getrefshape(interpolation)}(1), interpolation)
 
-    for facet in facetset
-        cellid, facetid = facet.idx
-        cell = getcells(grid, cellid)
-        facet_nodes = cell.nodes[collect(facet_dofs[facetid])]
-        x1 = Ferrite.get_node_coordinate(grid, first(facet_nodes))
-        x2 = Ferrite.get_node_coordinate(grid, last(facet_nodes))
-        measure += norm(x2 - x1)
+    for facet in FacetIterator(grid, facetset)
+        reinit!(facetvalues, facet)
+        for q_point in 1:getnquadpoints(facetvalues)
+            measure += getdetJdV(facetvalues, q_point)
+        end
     end
 
     return measure
@@ -135,13 +134,15 @@ function _facetset_radius_range(grid, interpolation, facetset)
     rmin = Inf
     rmax = -Inf
     facet_dofs = Ferrite.dirichlet_facetdof_indices(interpolation)
+    facet_cache = FacetCache(grid)
 
     for facet in facetset
-        cellid, facetid = facet.idx
-        cell = getcells(grid, cellid)
+        facetid = facet[2]
+        reinit!(facet_cache, facet)
+        coordinates = getcoordinates(facet_cache)
 
-        for nodeid in cell.nodes[collect(facet_dofs[facetid])]
-            r = Ferrite.get_node_coordinate(grid, nodeid)[1]
+        for x in coordinates[collect(facet_dofs[facetid])]
+            r = x[1]
             rmin = min(rmin, r)
             rmax = max(rmax, r)
         end
@@ -152,10 +153,10 @@ end
 
 
 function _geometry_tolerance(grid)
-    scale = zero(eltype(first(getnodes(grid)).x))
+    scale = zero(eltype(Ferrite.get_node_coordinate(grid, 1)))
 
-    for node in getnodes(grid)
-        scale = max(scale, maximum(abs, node.x))
+    for nodeid in 1:getnnodes(grid)
+        scale = max(scale, maximum(abs, Ferrite.get_node_coordinate(grid, nodeid)))
     end
 
     return max(scale, one(scale)) * sqrt(eps(float(scale)))

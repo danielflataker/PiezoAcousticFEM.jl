@@ -9,7 +9,7 @@ function reconstruct_fields(assembly::KFormAssembly, solution::DirectVoltageSolu
     return (
         displacement=nodal_displacement(assembly, solution.displacement),
         potential=nodal_potential(assembly, solution.potential),
-        radius=[node.x[1] for node in getnodes(grid)],
+        radius=[Ferrite.get_node_coordinate(grid, nodeid)[1] for nodeid in 1:getnnodes(grid)],
     )
 end
 
@@ -37,7 +37,7 @@ function reconstruct_fields(result::ShortCircuitModalResult, mode_index::Integer
     return (
         displacement=nodal_displacement(assembly, mode),
         potential=nodal_potential(assembly, potential),
-        radius=[node.x[1] for node in getnodes(grid)],
+        radius=[Ferrite.get_node_coordinate(grid, nodeid)[1] for nodeid in 1:getnnodes(grid)],
         eigenvalue=result.eigenvalues[mode_index],
         angular_frequency=result.angular_frequencies[mode_index],
         frequency=result.frequencies[mode_index],

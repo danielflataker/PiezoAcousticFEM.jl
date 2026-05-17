@@ -42,7 +42,7 @@ function assemble_k_form_dense(
     u_range = dof_range(dh, :u)
     ϕ_range = dof_range(dh, :ϕ)
 
-    for (cellid, cell) in enumerate(CellIterator(grid))
+    for cell in CellIterator(dh)
         reinit!(cellvalues_u, cell)
         reinit!(cellvalues_ϕ, cell)
 
@@ -54,7 +54,7 @@ function assemble_k_form_dense(
             formulation,
         )
 
-        cell_dofs = celldofs(dh, cellid)
+        cell_dofs = celldofs(cell)
         u_local = [compact_displacement_dof(dofmap, dof) for dof in cell_dofs[u_range]]
         ϕ_local = [compact_potential_dof(dofmap, dof) for dof in cell_dofs[ϕ_range]]
 
@@ -118,7 +118,7 @@ function assemble_k_form_sparse(
     u_local = Vector{Int}(undef, nᵤ_cell)
     ϕ_local = Vector{Int}(undef, nϕ_cell)
 
-    for (cellid, cell) in enumerate(CellIterator(grid))
+    for cell in CellIterator(dh)
         reinit!(cellvalues_u, cell)
         reinit!(cellvalues_ϕ, cell)
 
@@ -130,7 +130,7 @@ function assemble_k_form_sparse(
             formulation,
         )
 
-        cell_dofs = celldofs(dh, cellid)
+        cell_dofs = celldofs(cell)
         fill_compact_dofs!(u_local, dofmap, cell_dofs[u_range], :u)
         fill_compact_dofs!(ϕ_local, dofmap, cell_dofs[ϕ_range], :ϕ)
 
@@ -225,7 +225,7 @@ end
 
 
 function k_form_block_types_from_grid(material::AxisymmetricRZPiezoMaterial, grid)
-    Tx = eltype(first(getnodes(grid)).x)
+    Tx = eltype(Ferrite.get_node_coordinate(grid, 1))
 
     return (
         promote_type(eltype(material.cᴱ), Tx),

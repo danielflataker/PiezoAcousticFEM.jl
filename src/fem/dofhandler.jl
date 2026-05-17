@@ -161,10 +161,12 @@ function _potential_ferrite_dofs_on_facets(dh::DofHandler, facetset)
     field_range = dof_range(dh, :ϕ)
     field_offset = first(field_range) - 1
     dofs = Int[]
+    facet_cache = FacetCache(dh)
 
     for facet in facetset
-        cellid, facetid = facet.idx
-        cell_dofs = celldofs(dh, cellid)
+        facetid = facet[2]
+        reinit!(facet_cache, facet)
+        cell_dofs = celldofs(facet_cache)
         local_dofs = field_offset .+ collect(facet_dofs[facetid])
         append!(dofs, cell_dofs[local_dofs])
     end
@@ -180,10 +182,12 @@ function _displacement_component_ferrite_dofs_on_facets(dh::DofHandler, facetset
     field_range = dof_range(dh, :u)
     field_offset = first(field_range) - 1
     dofs = Int[]
+    facet_cache = FacetCache(dh)
 
     for facet in facetset
-        cellid, facetid = facet.idx
-        cell_dofs = celldofs(dh, cellid)
+        facetid = facet[2]
+        reinit!(facet_cache, facet)
+        cell_dofs = celldofs(facet_cache)
         local_dofs = [
             field_offset + 2 * (scalar_dof - 1) + component_index
             for scalar_dof in facet_dofs[facetid]

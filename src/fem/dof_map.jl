@@ -43,15 +43,12 @@ function PiezoFieldDofMap(dh::DofHandler)
 
     u_range = dof_range(dh, :u)
     ϕ_range = dof_range(dh, :ϕ)
-    grid = Ferrite.get_grid(dh)
-
-    for cellid in 1:getncells(grid)
-        cell = getcells(grid, cellid)
-        cell_dofs = celldofs(dh, cellid)
+    for cell in CellIterator(dh)
+        cell_dofs = celldofs(cell)
         cell_u_dofs = cell_dofs[u_range]
         cell_ϕ_dofs = cell_dofs[ϕ_range]
 
-        for (a, nodeid) in pairs(cell.nodes)
+        for (a, nodeid) in pairs(getnodes(cell))
             node_to_u[(nodeid, 1)] = u_index[cell_u_dofs[2a - 1]]
             node_to_u[(nodeid, 2)] = u_index[cell_u_dofs[2a]]
             node_to_phi[nodeid] = ϕ_index[cell_ϕ_dofs[a]]
@@ -86,8 +83,8 @@ function _field_dofs(dh::DofHandler, field::Symbol)
     range = dof_range(dh, field)
     dofs = Int[]
 
-    for cellid in 1:getncells(Ferrite.get_grid(dh))
-        append!(dofs, celldofs(dh, cellid)[range])
+    for cell in CellIterator(dh)
+        append!(dofs, celldofs(cell)[range])
     end
 
     return sort!(unique!(dofs))
