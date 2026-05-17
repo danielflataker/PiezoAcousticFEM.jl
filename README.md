@@ -6,15 +6,14 @@ small, explicit core for axisymmetric piezoelectric solids in vacuum: assembly
 of K-form matrices, voltage-driven harmonic response, and short-circuit modal
 reference calculations.
 
-The mathematical direction is based primarily on the published formulation in
-Jan Kocbach's 2000 dissertation and the 1999 FEMP technical report by Kocbach,
-Lunde, and Vestrheim. The implementation in this repository is original Julia
-code.
+The mathematical formulation follows standard piezoelectric finite-element
+theory, with the main references being Jan Kocbach's 2000 dissertation and the
+1999 FEMP technical report by Kocbach, Lunde, and Vestrheim. The implementation
+in this repository is original Julia code.
 
-This package aims to provide a clearer, testable, package-oriented workflow than
-the original FEMP-style research code: explicit problem objects, assembly,
-analysis preparation, result objects, observables, and reproducible validation
-tests.
+This package aims to provide a clear, testable, package-oriented workflow:
+explicit problem objects, assembly, analysis preparation, result objects,
+observables, and reproducible validation tests.
 
 ## Current Scope
 
