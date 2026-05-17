@@ -7,6 +7,7 @@ using PiezoAcousticFEM
 
 
 include("test_materials.jl")
+include("test_material_contract.jl")
 include("test_element_assembly.jl")
 include("test_boundary_conditions.jl")
 include("test_reductions_direct_voltage.jl")

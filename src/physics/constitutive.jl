@@ -17,7 +17,7 @@ function electric_field(::AxisymmetricRZ, ∇ϕ)
 end
 
 """
-    stress(material::Piezo6mmAxi, S, E)
+    stress(material::AxisymmetricRZPiezoMaterial, S, E)
 
 Return the mechanical stress in Voigt form for a linear piezoelectric material:
 
@@ -28,12 +28,12 @@ This uses `transpose(material.e)` instead of `material.e'`, so the expression
 does not complex-conjugate the piezoelectric matrix if later loss models add
 complex constants.
 """
-function stress(material::Piezo6mmAxi, S, E)
+function stress(material::AxisymmetricRZPiezoMaterial, S, E)
     return material.cᴱ * S - transpose(material.e) * E
 end
 
 """
-    electric_displacement(material::Piezo6mmAxi, S, E)
+    electric_displacement(material::AxisymmetricRZPiezoMaterial, S, E)
 
 Return the electric displacement for a linear piezoelectric material:
 
@@ -41,6 +41,6 @@ Return the electric displacement for a linear piezoelectric material:
 
 Here `S = [S_rr, S_θθ, S_zz, γ_rz]` and `E = [E_r, E_z]`.
 """
-function electric_displacement(material::Piezo6mmAxi, S, E)
+function electric_displacement(material::AxisymmetricRZPiezoMaterial, S, E)
     return material.e * S + material.εˢ * E
 end

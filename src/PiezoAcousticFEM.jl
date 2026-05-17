@@ -36,7 +36,8 @@ include("postprocessing/observables.jl")
 include("postprocessing/vtk_output.jl")
 
 export AbstractFormulation, AxisymmetricRZ
-export Piezo6mmConstants, Piezo6mmAxi, PZT5A, reduce_material, effective_material
+export AbstractMaterial, AbstractPiezoMaterial, AbstractReducedPiezoMaterial
+export PiezoMaterial, AxisymmetricRZPiezoMaterial, PZT5A, reduce_material, effective_material
 export Lossless, PhysicalLoss, RealMaterial, MaterialAsGiven, PiezoComplexMaterialLoss
 export NoSystemDamping
 export FacetElectrode, TwoTerminalElectrodes

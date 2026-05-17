@@ -11,9 +11,17 @@ abstract type AbstractMaterial end
 """
     AbstractPiezoMaterial <: AbstractMaterial
 
-Supertype for linear piezoelectric material models.
+Supertype for linear piezoelectric material models in stress-charge form.
 """
 abstract type AbstractPiezoMaterial <: AbstractMaterial end
+
+"""
+    AbstractReducedPiezoMaterial <: AbstractPiezoMaterial
+
+Supertype for formulation-specific piezoelectric materials after reducing a
+full Voigt source material to the field basis used by an FE formulation.
+"""
+abstract type AbstractReducedPiezoMaterial <: AbstractPiezoMaterial end
 
 """
     AbstractLossModel
@@ -90,13 +98,25 @@ struct PhysicalLoss{MP<:AbstractMaterialPolicy,SD<:AbstractSystemDamping} <: Abs
 end
 
 """
-    Piezo6mmConstants
+    PiezoMaterial
 
-Full 6mm piezoelectric material model in Voigt form. The fields may have
-independent element types, so stiffness, piezoelectric coupling, permittivity,
-and mass density are not artificially converted to one scalar type.
+Full piezoelectric material in Voigt matrix form. This is the source-material
+storage type used by built-in material constructors. It stores
+
+    cᴱ :: 6×6
+    e  :: 3×6
+    εˢ :: 3×3
+
+for the stress-charge constitutive equations
+
+    T = cᴱ*S - transpose(e)*E
+    D = e*S + εˢ*E
+
+with Voigt ordering `[11, 22, 33, 23, 13, 12]` and engineering shear strains.
+The type itself does not enforce symmetry or a 6mm material class; constructors
+and validation policy are responsible for documenting such assumptions.
 """
-struct Piezo6mmConstants{TC,TE,Tε,Tρ} <: AbstractPiezoMaterial
+struct PiezoMaterial{TC,TE,Tε,Tρ} <: AbstractPiezoMaterial
     cᴱ::SMatrix{6,6,TC,36}
     e::SMatrix{3,6,TE,18}
     εˢ::SMatrix{3,3,Tε,9}
@@ -104,10 +124,9 @@ struct Piezo6mmConstants{TC,TE,Tε,Tρ} <: AbstractPiezoMaterial
 end
 
 """
-    Piezo6mmAxi
+    AxisymmetricRZPiezoMaterial
 
-6mm piezoelectric material explicitly reduced to the axisymmetric r-z
-formulation.
+Piezoelectric material reduced to the `AxisymmetricRZ` formulation.
 
 The fields have dimensions
 
@@ -125,7 +144,7 @@ so that
     T = cᴱ*S - transpose(e)*E
     D = e*S + εˢ*E
 """
-struct Piezo6mmAxi{TC,TE,Tε,Tρ} <: AbstractPiezoMaterial
+struct AxisymmetricRZPiezoMaterial{TC,TE,Tε,Tρ} <: AbstractReducedPiezoMaterial
     cᴱ::SMatrix{4,4,TC,16}
     e::SMatrix{2,4,TE,8}
     εˢ::SMatrix{2,2,Tε,4}
@@ -135,29 +154,28 @@ end
 """
     PZT5A(; TC=Float64, TE=TC, Tε=TC, Tρ=TC)
 
-Return full 6mm PZT-5A material constants. The type parameters are independent:
+Return full-Voigt PZT-5A material constants. The type parameters are independent:
 `TC` for stiffness, `TE` for piezoelectric coupling, `Tε` for permittivity, and
 `Tρ` for mass density.
 
-The constants use SI units and follow the PZT-5A values used in Kocbach/FEMP:
-stiffness in Pa, piezoelectric coupling in C/m^2, permittivity in F/m, and
-density in kg/m^3.
+The constants use SI units and follow FEMP material `40`: stiffness in Pa,
+piezoelectric coupling in C/m^2, permittivity in F/m, and density in kg/m^3.
 """
 function PZT5A(; T=Float64, TC=T, TE=TC, Tε=TC, Tρ=TC)
     c11 = TC(12.1e10)
     c12 = TC(7.54e10)
     c13 = TC(7.52e10)
     c33 = TC(11.1e10)
-    c44 = TC(2.26e10)
-    c66 = (c11 - c12) / TC(2)
+    c44 = TC(2.11e10)
+    c55 = TC(2.11e10)
+    c66 = TC(2.26e10)
 
     e31 = TE(-5.4)
     e33 = TE(15.8)
     e15 = TE(12.3)
 
-    ε0 = Tε(8.8541878128e-12)
-    ε11 = Tε(916) * ε0
-    ε33 = Tε(830) * ε0
+    ε11 = Tε(8.11026e-9)
+    ε33 = Tε(7.34882e-9)
 
     ρ = Tρ(7750.0)
 
@@ -166,7 +184,7 @@ function PZT5A(; T=Float64, TC=T, TE=TC, Tε=TC, Tρ=TC)
         c12 c11 c13 TC(0) TC(0) TC(0)
         c13 c13 c33 TC(0) TC(0) TC(0)
         TC(0) TC(0) TC(0) c44 TC(0) TC(0)
-        TC(0) TC(0) TC(0) TC(0) c44 TC(0)
+        TC(0) TC(0) TC(0) TC(0) c55 TC(0)
         TC(0) TC(0) TC(0) TC(0) TC(0) c66
     ]
 
@@ -182,31 +200,35 @@ function PZT5A(; T=Float64, TC=T, TE=TC, Tε=TC, Tρ=TC)
         Tε(0) Tε(0) ε33
     ]
 
-    return Piezo6mmConstants(cᴱ, e, εˢ, ρ)
+    return PiezoMaterial(cᴱ, e, εˢ, ρ)
 end
 
 """
     reduce_material(material, formulation)
 
-Explicit reduction from the full material model to the formulation field basis.
+Explicit reduction from a full material model to the formulation field basis.
+For `AxisymmetricRZ`, the reduced strain basis is
+`[S_rr, S_θθ, S_zz, γ_rz]`, corresponding to full Voigt indices
+`[1, 2, 3, 5]` in `[11, 22, 33, 23, 13, 12]` ordering.
 """
-reduce_material(material::Piezo6mmAxi, ::AxisymmetricRZ) = material
+reduce_material(material::AxisymmetricRZPiezoMaterial, ::AxisymmetricRZ) = material
 
-function reduce_material(material::Piezo6mmConstants, ::AxisymmetricRZ)
+function reduce_material(material::PiezoMaterial, ::AxisymmetricRZ)
     c = material.cᴱ
     e = material.e
     ε = material.εˢ
+    basis = (1, 2, 3, 5)
 
     c_axi = @SMatrix [
-        c[1, 1] c[1, 2] c[1, 3] c[1, 5]
-        c[2, 1] c[2, 2] c[2, 3] c[2, 5]
-        c[3, 1] c[3, 2] c[3, 3] c[3, 5]
-        c[5, 1] c[5, 2] c[5, 3] c[5, 5]
+        c[basis[1], basis[1]] c[basis[1], basis[2]] c[basis[1], basis[3]] c[basis[1], basis[4]]
+        c[basis[2], basis[1]] c[basis[2], basis[2]] c[basis[2], basis[3]] c[basis[2], basis[4]]
+        c[basis[3], basis[1]] c[basis[3], basis[2]] c[basis[3], basis[3]] c[basis[3], basis[4]]
+        c[basis[4], basis[1]] c[basis[4], basis[2]] c[basis[4], basis[3]] c[basis[4], basis[4]]
     ]
 
     e_axi = @SMatrix [
-        e[1, 1] e[1, 2] e[1, 3] e[1, 5]
-        e[3, 1] e[3, 2] e[3, 3] e[3, 5]
+        e[1, basis[1]] e[1, basis[2]] e[1, basis[3]] e[1, basis[4]]
+        e[3, basis[1]] e[3, basis[2]] e[3, basis[3]] e[3, basis[4]]
     ]
 
     ε_axi = @SMatrix [
@@ -214,7 +236,7 @@ function reduce_material(material::Piezo6mmConstants, ::AxisymmetricRZ)
         ε[3, 1] ε[3, 3]
     ]
 
-    return Piezo6mmAxi(c_axi, e_axi, ε_axi, material.ρ)
+    return AxisymmetricRZPiezoMaterial(c_axi, e_axi, ε_axi, material.ρ)
 end
 
 
@@ -233,17 +255,17 @@ effective_material(
 ) = apply_material_policy(reduce_material(material, formulation), loss.material_policy)
 
 
-lossless_material(material::Piezo6mmConstants) =
-    Piezo6mmConstants(real.(material.cᴱ), real.(material.e), real.(material.εˢ), real(material.ρ))
+lossless_material(material::PiezoMaterial) =
+    PiezoMaterial(real.(material.cᴱ), real.(material.e), real.(material.εˢ), real(material.ρ))
 
-lossless_material(material::Piezo6mmAxi) =
-    Piezo6mmAxi(real.(material.cᴱ), real.(material.e), real.(material.εˢ), real(material.ρ))
+lossless_material(material::AxisymmetricRZPiezoMaterial) =
+    AxisymmetricRZPiezoMaterial(real.(material.cᴱ), real.(material.e), real.(material.εˢ), real(material.ρ))
 
 apply_material_policy(material::AbstractPiezoMaterial, ::RealMaterial) = lossless_material(material)
 apply_material_policy(material::AbstractPiezoMaterial, ::MaterialAsGiven) = material
 
-function apply_material_policy(material::Piezo6mmConstants, loss::PiezoComplexMaterialLoss)
-    return Piezo6mmConstants(
+function apply_material_policy(material::PiezoMaterial, loss::PiezoComplexMaterialLoss)
+    return PiezoMaterial(
         material.cᴱ .* complex(one(loss.Qm), inv(loss.Qm)),
         material.e .* complex(one(loss.Qe), inv(loss.Qe)),
         material.εˢ .* complex(one(loss.tan_delta), -loss.tan_delta),
@@ -251,8 +273,8 @@ function apply_material_policy(material::Piezo6mmConstants, loss::PiezoComplexMa
     )
 end
 
-function apply_material_policy(material::Piezo6mmAxi, loss::PiezoComplexMaterialLoss)
-    return Piezo6mmAxi(
+function apply_material_policy(material::AxisymmetricRZPiezoMaterial, loss::PiezoComplexMaterialLoss)
+    return AxisymmetricRZPiezoMaterial(
         material.cᴱ .* complex(one(loss.Qm), inv(loss.Qm)),
         material.e .* complex(one(loss.Qe), inv(loss.Qe)),
         material.εˢ .* complex(one(loss.tan_delta), -loss.tan_delta),

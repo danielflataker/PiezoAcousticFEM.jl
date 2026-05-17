@@ -151,7 +151,7 @@ Assumes `reinit!` has already been called on the cellvalues objects.
 `getcoordinates(cell)`.
 """
 function piezo_element_matrices(cellvalues_u, cellvalues_ϕ, xᵉ,
-    material::Piezo6mmAxi,
+    material::AxisymmetricRZPiezoMaterial,
     formulation::AxisymmetricRZ)
 
     validate_element_geometry(formulation, xᵉ)
@@ -191,7 +191,7 @@ function piezo_element_matrices(cellvalues_u, cellvalues_ϕ, xᵉ,
 end
 
 
-function k_form_block_types_from_coordinates(material::Piezo6mmAxi, xᵉ)
+function k_form_block_types_from_coordinates(material::AxisymmetricRZPiezoMaterial, xᵉ)
     Tx = coordinate_eltype(xᵉ)
 
     return (

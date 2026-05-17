@@ -11,7 +11,7 @@ This is a small reference path for tests and algebraic verification.
 - The adapter part (`KFormAssembly`) preserves the mapping from Ferrite DOFs to
   compact Kocbach blocks.
 """
-function assemble_k_form_dense(grid, material::Piezo6mmAxi, formulation::AxisymmetricRZ, ip, qr)
+function assemble_k_form_dense(grid, material::AxisymmetricRZPiezoMaterial, formulation::AxisymmetricRZ, ip, qr)
     dh = piezo_dofhandler(grid, ip)
     cellvalues_u = CellValues(qr, ip)
     cellvalues_ϕ = CellValues(qr, ip)
@@ -24,7 +24,7 @@ function assemble_k_form_dense(
     dh::DofHandler,
     cellvalues_u,
     cellvalues_ϕ,
-    material::Piezo6mmAxi,
+    material::AxisymmetricRZPiezoMaterial,
     formulation::AxisymmetricRZ,
 )
     grid = Ferrite.get_grid(dh)
@@ -76,7 +76,7 @@ end
 Assemble sparse global K-form blocks with triplet collection. Repeated element
 contributions are coalesced by `sparse(I, J, V, m, n)`.
 """
-function assemble_k_form_sparse(grid, material::Piezo6mmAxi, formulation::AxisymmetricRZ, ip, qr)
+function assemble_k_form_sparse(grid, material::AxisymmetricRZPiezoMaterial, formulation::AxisymmetricRZ, ip, qr)
     dh = piezo_dofhandler(grid, ip)
     cellvalues_u = CellValues(qr, ip)
     cellvalues_ϕ = CellValues(qr, ip)
@@ -89,7 +89,7 @@ function assemble_k_form_sparse(
     dh::DofHandler,
     cellvalues_u,
     cellvalues_ϕ,
-    material::Piezo6mmAxi,
+    material::AxisymmetricRZPiezoMaterial,
     formulation::AxisymmetricRZ,
 )
     grid = Ferrite.get_grid(dh)
@@ -224,7 +224,7 @@ function sparse_matrix(triplets, nrows, ncols)
 end
 
 
-function k_form_block_types_from_grid(material::Piezo6mmAxi, grid)
+function k_form_block_types_from_grid(material::AxisymmetricRZPiezoMaterial, grid)
     Tx = eltype(first(getnodes(grid)).x)
 
     return (

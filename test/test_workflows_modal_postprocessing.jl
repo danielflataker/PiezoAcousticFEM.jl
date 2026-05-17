@@ -31,7 +31,7 @@
     @test problem.electrodes.reference isa FacetElectrode
     @test only(problem.boundary_conditions.mechanical) isa AxisBoundary
     @test assembled.problem === problem
-    @test assembled.material isa Piezo6mmAxi
+    @test assembled.material isa AxisymmetricRZPiezoMaterial
     @test reduction.assembled === assembled
     @test reduction.reduced isa PiezoAcousticFEM.ElectrodeReducedKForm
     @test result isa HarmonicVoltageResult

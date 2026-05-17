@@ -1,6 +1,6 @@
 @testset "PZT5A constants" begin
     mat = effective_material(PZT5A(), AxisymmetricRZ(), Lossless())
-    @test mat.cᴱ[4, 4] == 2.26e10
+    @test mat.cᴱ[4, 4] == 2.11e10
     @test mat.e[1, 4] == 12.3
     @test mat.e[2, 1] == -5.4
     @test mat.e[2, 3] == 15.8
@@ -8,22 +8,22 @@
 
     full = PZT5A(; TC=ComplexF64, TE=Float32, Tε=BigFloat, Tρ=Float64)
     reduced = reduce_material(full, AxisymmetricRZ())
-    @test full isa Piezo6mmConstants
-    @test reduced isa Piezo6mmAxi
+    @test full isa PiezoMaterial
+    @test reduced isa AxisymmetricRZPiezoMaterial
     @test eltype(reduced.cᴱ) == ComplexF64
     @test eltype(reduced.e) == Float32
     @test eltype(reduced.εˢ) == BigFloat
     @test typeof(reduced.ρ) == Float64
 
     base = PZT5A()
-    complex_full = Piezo6mmConstants(
+    complex_full = PiezoMaterial(
         complex.(base.cᴱ, base.cᴱ .* 0.01),
         complex.(base.e, base.e .* 0.01),
         complex.(base.εˢ, base.εˢ .* 0.01),
         base.ρ,
     )
     effective = effective_material(complex_full, AxisymmetricRZ(), Lossless())
-    @test effective isa Piezo6mmAxi
+    @test effective isa AxisymmetricRZPiezoMaterial
     @test !(eltype(effective.cᴱ) <: Complex)
     @test effective.cᴱ ≈ real.(reduce_material(complex_full, AxisymmetricRZ()).cᴱ)
 
@@ -71,7 +71,7 @@ end
     base = PZT5A()
 
     function scaled_material(scale)
-        return Piezo6mmConstants(
+        return PiezoMaterial(
             base.cᴱ .* scale,
             base.e .* scale,
             base.εˢ .* scale,
