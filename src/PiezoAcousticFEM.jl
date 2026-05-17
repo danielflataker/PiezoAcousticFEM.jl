@@ -48,6 +48,6 @@ export solve, assemble, prepare_analysis, validate
 export HarmonicVoltageResult, ShortCircuitModalResult
 export AbstractObservable, AdmittanceObservable, ChargeObservable, CurrentObservable
 export ModalFrequenciesObservable, evaluate
-export reconstruct_fields, write_vtk
+export reconstruct_field_dofs, reconstruct_fields, write_vtk
 
 end

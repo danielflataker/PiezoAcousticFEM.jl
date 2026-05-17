@@ -2,8 +2,8 @@
     validate(problem)
 
 Preflight a piezoelectric problem before matrix assembly. The current supported
-discretization is nodal equal-order Lagrange interpolation for displacement and
-electric potential on a 2D axisymmetric `r-z` grid.
+discretization is equal-order scalar `Lagrange` or `Serendipity` interpolation
+for displacement and electric potential on a 2D axisymmetric `r-z` grid.
 """
 function validate(problem::PiezoProblem)
     validate_supported_discretization(problem)
@@ -42,8 +42,8 @@ function validate_supported_discretization(problem::PiezoProblem)
     Ferrite.getspatialdim(grid) == 2 ||
         throw(ArgumentError("unsupported discretization: axisymmetric r-z models require 2D node coordinates"))
 
-    _is_lagrange_interpolation(interpolation) ||
-        throw(ArgumentError("unsupported discretization: interpolation must be a nodal Lagrange interpolation"))
+    _is_supported_scalar_interpolation(interpolation) ||
+        throw(ArgumentError("unsupported discretization: interpolation must be Lagrange or Serendipity"))
 
     ip_shape = Ferrite.getrefshape(interpolation)
     qr_shape = Ferrite.getrefshape(quadrature)
@@ -52,20 +52,13 @@ function validate_supported_discretization(problem::PiezoProblem)
             "unsupported discretization: quadrature reference shape $qr_shape must match interpolation reference shape $ip_shape",
         ))
 
-    nbase = Ferrite.getnbasefunctions(interpolation)
-
     for cellid in 1:getncells(grid)
         cell = getcells(grid, cellid)
         cell_shape = Ferrite.getrefshape(typeof(cell))
-        nnodes = Ferrite.nnodes_per_cell(grid, cellid)
 
         cell_shape == ip_shape ||
             throw(ArgumentError(
                 "unsupported discretization: cell $cellid has reference shape $cell_shape but interpolation uses $ip_shape",
-            ))
-        nbase == nnodes ||
-            throw(ArgumentError(
-                "unsupported discretization: cell $cellid has $nnodes mesh nodes but interpolation has $nbase scalar shape functions; higher-order or interior DOFs are not supported yet",
             ))
     end
 
@@ -73,8 +66,8 @@ function validate_supported_discretization(problem::PiezoProblem)
 end
 
 
-_is_lagrange_interpolation(::Lagrange) = true
-_is_lagrange_interpolation(_) = false
+_is_supported_scalar_interpolation(::Union{Lagrange,Serendipity}) = true
+_is_supported_scalar_interpolation(_) = false
 
 
 function _validate_electrode(grid, interpolation, electrode::FacetElectrode, label::AbstractString, tol)
@@ -133,15 +126,14 @@ end
 function _facetset_radius_range(grid, interpolation, facetset)
     rmin = Inf
     rmax = -Inf
-    facet_dofs = Ferrite.dirichlet_facetdof_indices(interpolation)
-    facet_cache = FacetCache(grid)
+    facetvalues = FacetValues(FacetQuadratureRule{Ferrite.getrefshape(interpolation)}(2), interpolation)
 
-    for facet in facetset
-        facetid = facet[2]
-        reinit!(facet_cache, facet)
-        coordinates = getcoordinates(facet_cache)
+    for facet in FacetIterator(grid, facetset)
+        coordinates = getcoordinates(facet)
+        reinit!(facetvalues, facet)
 
-        for x in coordinates[collect(facet_dofs[facetid])]
+        for q_point in 1:getnquadpoints(facetvalues)
+            x = spatial_coordinate(facetvalues, q_point, coordinates)
             r = x[1]
             rmin = min(rmin, r)
             rmax = max(rmax, r)

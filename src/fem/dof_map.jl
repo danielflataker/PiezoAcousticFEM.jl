@@ -1,8 +1,9 @@
 """
     PiezoFieldDofMap
 
-Én kompakt mapping mellom Ferrite sine globale DOF-er og K-form-blokkenes
-feltvise DOF-er.
+Compact mapping between Ferrite global DOFs and K-form field DOFs.
+`node_to_u` and `node_to_phi` are vertex visualization helpers only; assembly,
+reductions, constraints, and solves use compact field DOF indices.
 """
 struct PiezoFieldDofMap
     u_dofs::Vector{Int}

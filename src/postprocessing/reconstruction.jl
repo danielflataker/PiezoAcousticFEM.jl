@@ -1,7 +1,39 @@
 """
+    reconstruct_field_dofs(assembly, solution)
+
+Return compact field-DOF values from a K-form solution. These vectors use this
+package's compact displacement and potential indexing, not grid-node indexing.
+"""
+function reconstruct_field_dofs(::KFormAssembly, solution::DirectVoltageSolution)
+    return (
+        displacement=solution.displacement,
+        potential=solution.potential,
+    )
+end
+
+
+reconstruct_field_dofs(result::HarmonicVoltageResult) =
+    reconstruct_field_dofs(result.assembled.assembly, result.solution)
+
+
+function reconstruct_field_dofs(result::ShortCircuitModalResult, mode_index::Integer)
+    1 <= mode_index <= size(result.modes, 2) ||
+        throw(ArgumentError("mode_index must be in 1:$(size(result.modes, 2))"))
+
+    mode = result.modes[:, mode_index]
+
+    return (
+        displacement=mode,
+        potential=reconstruct_short_circuit_modal_potential(result, mode),
+    )
+end
+
+
+"""
     reconstruct_fields(assembly, solution)
 
-Reconstruct nodal fields from compact K-form solution vectors.
+Reconstruct grid-vertex fields from compact K-form solution vectors. This is a
+simple visualization path; compact field DOFs remain the solver truth.
 """
 function reconstruct_fields(assembly::KFormAssembly, solution::DirectVoltageSolution)
     grid = Ferrite.get_grid(assembly.dofhandler)

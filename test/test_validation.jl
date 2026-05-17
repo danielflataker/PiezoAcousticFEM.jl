@@ -31,13 +31,6 @@ end
     problem = validation_test_problem(; grid, ip, qr)
     @test validate(problem) === nothing
 
-    quadratic_problem = validation_test_problem(;
-        grid,
-        ip=Lagrange{RefQuadrilateral,2}(),
-        qr=QuadratureRule{RefQuadrilateral}(3),
-    )
-    @test_throws ArgumentError assemble(quadratic_problem)
-
     wrong_shape_problem = validation_test_problem(;
         grid,
         ip=Lagrange{RefTriangle,1}(),
