@@ -36,7 +36,7 @@ Reconstruct grid-vertex fields from compact K-form solution vectors. This is a
 simple visualization path; compact field DOFs remain the solver truth.
 """
 function reconstruct_fields(assembly::KFormAssembly, solution::DirectVoltageSolution)
-    grid = Ferrite.get_grid(assembly.dofhandler)
+    grid = ferrite_grid(assembly)
 
     return (
         displacement=nodal_displacement(assembly, solution.displacement),
@@ -64,7 +64,7 @@ function reconstruct_fields(result::ShortCircuitModalResult, mode_index::Integer
     assembly = result.assembled.assembly
     mode = result.modes[:, mode_index]
     potential = reconstruct_short_circuit_modal_potential(result, mode)
-    grid = Ferrite.get_grid(assembly.dofhandler)
+    grid = ferrite_grid(assembly)
 
     return (
         displacement=nodal_displacement(assembly, mode),
@@ -96,7 +96,7 @@ end
 
 function nodal_displacement(assembly::KFormAssembly, displacement)
     dh = assembly.dofhandler
-    grid = Ferrite.get_grid(dh)
+    grid = ferrite_grid(dh)
     values = [zero(Vec{2, eltype(displacement)}) for _ in 1:getnnodes(grid)]
     dofmap = assembly.dofmap
 
@@ -112,7 +112,7 @@ end
 
 function nodal_potential(assembly::KFormAssembly, potential)
     dh = assembly.dofhandler
-    grid = Ferrite.get_grid(dh)
+    grid = ferrite_grid(dh)
     values = zeros(eltype(potential), getnnodes(grid))
     dofmap = assembly.dofmap
 

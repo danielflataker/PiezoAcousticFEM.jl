@@ -16,7 +16,7 @@ end
 function validate_boundary_semantics(problem::PiezoProblem)
     grid = problem.grid
     interpolation = problem.interpolation
-    tol = _geometry_tolerance(grid)
+    tol = ferrite_geometry_tolerance(grid)
 
     signal = _validate_electrode(grid, interpolation, problem.electrodes.signal, "signal electrode", tol)
     reference = _validate_electrode(grid, interpolation, problem.electrodes.reference, "reference electrode", tol)
@@ -72,7 +72,7 @@ _is_supported_scalar_interpolation(_) = false
 
 function _validate_electrode(grid, interpolation, electrode::FacetElectrode, label::AbstractString, tol)
     facetset = _validated_facetset(grid, electrode, label)
-    measure = _facetset_measure(grid, interpolation, facetset)
+    measure = ferrite_facet_measure(grid, interpolation, facetset)
     measure > tol ||
         throw(ArgumentError("$label must have nonzero boundary measure; observed measure=$measure with tolerance=$tol"))
 
@@ -82,7 +82,7 @@ end
 
 function _validate_mechanical_boundary(grid, interpolation, boundary::AxisBoundary, label::AbstractString, tol)
     facetset = _validated_facetset(grid, boundary, label)
-    rmin, rmax = _facetset_radius_range(grid, interpolation, facetset)
+    rmin, rmax = ferrite_facet_radius_range(grid, interpolation, facetset)
     max(abs(rmin), abs(rmax)) <= tol ||
         throw(ArgumentError(
             "$label must lie on the axis r=0; observed r range=[$rmin, $rmax] with tolerance=$tol",
@@ -94,7 +94,7 @@ end
 
 function _validated_facetset(grid, boundary_or_electrode, label::AbstractString)
     facetset = try
-        _resolve_facetset(grid, boundary_or_electrode)
+        resolve_facetset(grid, boundary_or_electrode)
     catch err
         err isa KeyError || rethrow()
         throw(ArgumentError("$label facet set $(err.key) does not exist"))
@@ -104,52 +104,4 @@ function _validated_facetset(grid, boundary_or_electrode, label::AbstractString)
         throw(ArgumentError("$label facet set must contain at least one facet"))
 
     return facetset
-end
-
-
-function _facetset_measure(grid, interpolation, facetset)
-    T = eltype(Ferrite.get_node_coordinate(grid, 1))
-    measure = zero(T)
-    facetvalues = FacetValues(FacetQuadratureRule{Ferrite.getrefshape(interpolation)}(1), interpolation)
-
-    for facet in FacetIterator(grid, facetset)
-        reinit!(facetvalues, facet)
-        for q_point in 1:getnquadpoints(facetvalues)
-            measure += getdetJdV(facetvalues, q_point)
-        end
-    end
-
-    return measure
-end
-
-
-function _facetset_radius_range(grid, interpolation, facetset)
-    rmin = Inf
-    rmax = -Inf
-    facetvalues = FacetValues(FacetQuadratureRule{Ferrite.getrefshape(interpolation)}(2), interpolation)
-
-    for facet in FacetIterator(grid, facetset)
-        coordinates = getcoordinates(facet)
-        reinit!(facetvalues, facet)
-
-        for q_point in 1:getnquadpoints(facetvalues)
-            x = spatial_coordinate(facetvalues, q_point, coordinates)
-            r = x[1]
-            rmin = min(rmin, r)
-            rmax = max(rmax, r)
-        end
-    end
-
-    return rmin, rmax
-end
-
-
-function _geometry_tolerance(grid)
-    scale = zero(eltype(Ferrite.get_node_coordinate(grid, 1)))
-
-    for nodeid in 1:getnnodes(grid)
-        scale = max(scale, maximum(abs, Ferrite.get_node_coordinate(grid, nodeid)))
-    end
-
-    return max(scale, one(scale)) * sqrt(eps(float(scale)))
 end

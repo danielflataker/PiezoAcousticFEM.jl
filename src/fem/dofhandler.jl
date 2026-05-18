@@ -1,33 +1,3 @@
-# Public adapter API ---------------------------------------------------------
-
-"""
-    KFormAssembly
-
-Adapter result between Ferrite and the Kocbach blocks. Ferrite owns the mesh,
-cells, interpolation, and global DOF numbering. `system` is this package's
-physics representation in K-form, with compact blocks.
-"""
-struct KFormAssembly{S,DH,M}
-    system::S
-    dofhandler::DH
-    dofmap::M
-end
-
-"""
-    piezo_dofhandler(grid, ip)
-
-Ferrite adapter: build a `DofHandler` for the fields `:u` and `:ϕ`.
-The interpolation `ip` is scalar; the displacement field uses `ip^2`.
-"""
-function piezo_dofhandler(grid, ip)
-    dh = DofHandler(grid)
-    add!(dh, :u, ip^2)
-    add!(dh, :ϕ, ip)
-    close!(dh)
-    return dh
-end
-
-
 """
     potential_dofs_on_facets(assembly, facetset)
 
@@ -38,7 +8,7 @@ DOF partitions.
 function potential_dofs_on_facets(assembly::KFormAssembly, facetset)
     dh = assembly.dofhandler
     dofmap = assembly.dofmap
-    ferrite_dofs = _potential_ferrite_dofs_on_facets(dh, facetset)
+    ferrite_dofs = ferrite_potential_dofs_on_facets(dh, facetset)
     indices = [compact_potential_dof(dofmap, dof) for dof in ferrite_dofs]
 
     return sort!(unique!(indices))
@@ -54,7 +24,7 @@ Find compact `u` indices for a displacement component on a Ferrite facetset.
 function displacement_component_dofs_on_facets(assembly::KFormAssembly, facetset, component::Symbol)
     dh = assembly.dofhandler
     dofmap = assembly.dofmap
-    ferrite_dofs = _displacement_component_ferrite_dofs_on_facets(dh, facetset, component)
+    ferrite_dofs = ferrite_displacement_component_dofs_on_facets(dh, facetset, component)
     indices = [compact_displacement_dof(dofmap, dof) for dof in ferrite_dofs]
 
     return sort!(unique!(indices))
@@ -68,8 +38,7 @@ Build a homogeneous Dirichlet condition for `u_r` on the symmetry axis. `axis`
 must be an explicit `AxisBoundary`.
 """
 function axis_radial_displacement_constraint(assembly::KFormAssembly; axis::AxisBoundary, value=0)
-    grid = Ferrite.get_grid(assembly.dofhandler)
-    axis_facets = _resolve_facetset(grid, axis)
+    axis_facets = resolve_facetset(ferrite_grid(assembly), axis)
     indices = displacement_component_dofs_on_facets(assembly, axis_facets, :r)
 
     return DirichletDofs(indices, fill(value, length(indices)))
@@ -82,9 +51,9 @@ end
 Build Kocbach's potential partition from explicit electrode objects.
 """
 function potential_partition(assembly::KFormAssembly; driven::FacetElectrode, grounded::FacetElectrode)
-    grid = Ferrite.get_grid(assembly.dofhandler)
-    driven_facets = _resolve_facetset(grid, driven)
-    grounded_facets = _resolve_facetset(grid, grounded)
+    grid = ferrite_grid(assembly)
+    driven_facets = resolve_facetset(grid, driven)
+    grounded_facets = resolve_facetset(grid, grounded)
 
     p = potential_dofs_on_facets(assembly, driven_facets)
     g = potential_dofs_on_facets(assembly, grounded_facets)
@@ -102,9 +71,9 @@ Build the electric DOF partition for short-circuit analyses. Both terminals are
 homogeneous electric Dirichlet sets.
 """
 function short_circuit_partition(assembly::KFormAssembly, electrodes::TwoTerminalElectrodes)
-    grid = Ferrite.get_grid(assembly.dofhandler)
-    signal_facets = _resolve_facetset(grid, electrodes.signal)
-    reference_facets = _resolve_facetset(grid, electrodes.reference)
+    grid = ferrite_grid(assembly)
+    signal_facets = resolve_facetset(grid, electrodes.signal)
+    reference_facets = resolve_facetset(grid, electrodes.reference)
 
     signal = potential_dofs_on_facets(assembly, signal_facets)
     reference = potential_dofs_on_facets(assembly, reference_facets)
@@ -152,72 +121,3 @@ function combine_dirichlet_dofs(constraints)
 
     return DirichletDofs(sorted_indices, sorted_values)
 end
-
-# Ferrite DOF helpers --------------------------------------------------------
-
-function _potential_ferrite_dofs_on_facets(dh::DofHandler, facetset)
-    interpolation = Ferrite.getfieldinterpolation(dh, Ferrite.find_field(dh, :ϕ))
-    facet_dofs = Ferrite.dirichlet_facetdof_indices(interpolation)
-    field_range = dof_range(dh, :ϕ)
-    field_offset = first(field_range) - 1
-    dofs = Int[]
-    facet_cache = FacetCache(dh)
-
-    for facet in facetset
-        facetid = facet[2]
-        reinit!(facet_cache, facet)
-        cell_dofs = celldofs(facet_cache)
-        local_dofs = field_offset .+ collect(facet_dofs[facetid])
-        append!(dofs, cell_dofs[local_dofs])
-    end
-
-    return sort!(unique!(dofs))
-end
-
-
-function _displacement_component_ferrite_dofs_on_facets(dh::DofHandler, facetset, component::Symbol)
-    component_index = _displacement_component_index(component)
-    scalar_interpolation = _scalar_base_interpolation(dh, :u)
-    facet_dofs = Ferrite.dirichlet_facetdof_indices(scalar_interpolation)
-    field_range = dof_range(dh, :u)
-    field_offset = first(field_range) - 1
-    dofs = Int[]
-    facet_cache = FacetCache(dh)
-
-    for facet in facetset
-        facetid = facet[2]
-        reinit!(facet_cache, facet)
-        cell_dofs = celldofs(facet_cache)
-        local_dofs = [
-            field_offset + 2 * (scalar_dof - 1) + component_index
-            for scalar_dof in facet_dofs[facetid]
-        ]
-        append!(dofs, cell_dofs[local_dofs])
-    end
-
-    return sort!(unique!(dofs))
-end
-
-
-# Private helpers ------------------------------------------------------------
-
-_resolve_facetset(grid, electrode::FacetElectrode{<:AbstractString}) =
-    getfacetset(grid, String(electrode.facetset))
-_resolve_facetset(_, electrode::FacetElectrode) = electrode.facetset
-_resolve_facetset(grid, boundary::FacetBoundary{<:AbstractString}) =
-    getfacetset(grid, String(boundary.facetset))
-_resolve_facetset(_, boundary::FacetBoundary) = boundary.facetset
-_resolve_facetset(grid, boundary::AxisBoundary) = _resolve_facetset(grid, boundary.boundary)
-
-_displacement_component_index(component::Symbol) =
-    component in (:r, :ur, :u_r) ? 1 :
-    component in (:z, :uz, :u_z) ? 2 :
-    throw(ArgumentError("unknown displacement component $component; expected :r/:ur or :z/:uz"))
-
-function _scalar_base_interpolation(dh::DofHandler, field::Symbol)
-    interpolation = Ferrite.getfieldinterpolation(dh, Ferrite.find_field(dh, field))
-
-    return _scalar_base_interpolation(interpolation)
-end
-
-_scalar_base_interpolation(interpolation) = interpolation.ip

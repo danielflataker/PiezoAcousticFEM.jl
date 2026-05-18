@@ -35,15 +35,15 @@ end
 
 
 function PiezoFieldDofMap(dh::DofHandler)
-    u_dofs = _field_dofs(dh, :u)
-    ϕ_dofs = _field_dofs(dh, :ϕ)
+    u_dofs = ferrite_field_dofs(dh, :u)
+    ϕ_dofs = ferrite_field_dofs(dh, :ϕ)
     u_index = Dict(dof => i for (i, dof) in pairs(u_dofs))
     ϕ_index = Dict(dof => i for (i, dof) in pairs(ϕ_dofs))
     node_to_u = Dict{Tuple{Int,Int},Int}()
     node_to_phi = Dict{Int,Int}()
 
-    u_range = dof_range(dh, :u)
-    ϕ_range = dof_range(dh, :ϕ)
+    u_range = piezo_field_dof_range(dh, :u)
+    ϕ_range = piezo_field_dof_range(dh, :ϕ)
     for cell in CellIterator(dh)
         cell_dofs = celldofs(cell)
         cell_u_dofs = cell_dofs[u_range]
@@ -69,24 +69,7 @@ compact_displacement_dof(dofmap::PiezoFieldDofMap, nodeid::Integer, component::I
     dofmap.node_to_u[(Int(nodeid), Int(component))]
 
 compact_displacement_dof(dofmap::PiezoFieldDofMap, nodeid::Integer, component::Symbol) =
-    compact_displacement_dof(dofmap, nodeid, _displacement_component_index(component))
+    compact_displacement_dof(dofmap, nodeid, displacement_component_index(component))
 
 compact_potential_node_dof(dofmap::PiezoFieldDofMap, nodeid::Integer) =
     dofmap.node_to_phi[Int(nodeid)]
-
-
-"""
-    _field_dofs(dh, field)
-
-Ferrite adapter: get all global Ferrite DOFs for one field.
-"""
-function _field_dofs(dh::DofHandler, field::Symbol)
-    range = dof_range(dh, field)
-    dofs = Int[]
-
-    for cell in CellIterator(dh)
-        append!(dofs, celldofs(cell)[range])
-    end
-
-    return sort!(unique!(dofs))
-end

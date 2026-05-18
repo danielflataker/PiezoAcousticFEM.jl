@@ -27,7 +27,7 @@ function assemble_k_form_dense(
     material::AxisymmetricRZPiezoMaterial,
     formulation::AxisymmetricRZ,
 )
-    grid = Ferrite.get_grid(dh)
+    grid = ferrite_grid(dh)
     dofmap = PiezoFieldDofMap(dh)
     u_dofs = dofmap.u_dofs
     ϕ_dofs = dofmap.ϕ_dofs
@@ -39,8 +39,8 @@ function assemble_k_form_dense(
     Kϕϕ = zeros(Tε, length(ϕ_dofs), length(ϕ_dofs))
     Muu = zeros(Tρ, length(u_dofs), length(u_dofs))
 
-    u_range = dof_range(dh, :u)
-    ϕ_range = dof_range(dh, :ϕ)
+    u_range = piezo_field_dof_range(dh, :u)
+    ϕ_range = piezo_field_dof_range(dh, :ϕ)
 
     for cell in CellIterator(dh)
         reinit!(cellvalues_u, cell)
@@ -92,7 +92,7 @@ function assemble_k_form_sparse(
     material::AxisymmetricRZPiezoMaterial,
     formulation::AxisymmetricRZ,
 )
-    grid = Ferrite.get_grid(dh)
+    grid = ferrite_grid(dh)
     dofmap = PiezoFieldDofMap(dh)
     u_dofs = dofmap.u_dofs
     ϕ_dofs = dofmap.ϕ_dofs
@@ -104,8 +104,8 @@ function assemble_k_form_sparse(
     Kϕϕ_triplets = matrix_triplets(Tε)
     Muu_triplets = matrix_triplets(Tρ)
 
-    u_range = dof_range(dh, :u)
-    ϕ_range = dof_range(dh, :ϕ)
+    u_range = piezo_field_dof_range(dh, :u)
+    ϕ_range = piezo_field_dof_range(dh, :ϕ)
     ncells = getncells(grid)
     nᵤ_cell = length(u_range)
     nϕ_cell = length(ϕ_range)

@@ -20,6 +20,7 @@ include("boundary_conditions/boundaries.jl")
 include("boundary_conditions/electrical_partition.jl")
 include("boundary_conditions/constraints.jl")
 
+include("fem/ferrite_backend.jl")
 include("fem/dof_map.jl")
 include("fem/dofhandler.jl")
 include("fem/assembly.jl")
