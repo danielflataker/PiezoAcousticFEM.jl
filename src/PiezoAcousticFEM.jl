@@ -45,6 +45,7 @@ export NoSystemDamping
 export FacetElectrode, TwoTerminalElectrodes
 export FacetBoundary, AxisBoundary, AxisymmetricBoundaryConditions
 export PiezoProblem, HarmonicVoltageAnalysis, ShortCircuitModalAnalysis
+export AbstractLinearSolverConfig, BackslashSolver, FactorizedDirectSolver
 export solve, assemble, prepare_analysis, validate
 export HarmonicVoltageResult, ShortCircuitModalResult
 export AbstractObservable, AdmittanceObservable, ChargeObservable, CurrentObservable

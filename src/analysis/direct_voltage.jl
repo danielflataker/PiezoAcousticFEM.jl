@@ -1,4 +1,27 @@
 """
+    AbstractLinearSolverConfig
+
+Configuration object for the linear solve used by voltage analyses.
+"""
+abstract type AbstractLinearSolverConfig end
+
+"""
+    BackslashSolver()
+
+Use Julia's direct `A \\ b` solve for each linear system.
+"""
+struct BackslashSolver <: AbstractLinearSolverConfig end
+
+"""
+    FactorizedDirectSolver()
+
+Factorize each reduced linear system with `factorize(A)` before solving. This
+is currently a per-solve factorization hook; reusable caches are future work.
+"""
+struct FactorizedDirectSolver <: AbstractLinearSolverConfig end
+
+
+"""
     DirectVoltageSolverInfo
 
 Metadata for the linear solve part of a direct voltage analysis.
@@ -63,6 +86,7 @@ function solve_direct_voltage(
     mechanical_dirichlet=nothing,
     analysis=nothing,
     convention=:exp_iomega_t,
+    solver::AbstractLinearSolverConfig=BackslashSolver(),
 )
     iszero(voltage) && throw(ArgumentError("voltage must be nonzero when computing admittance"))
 
@@ -70,7 +94,7 @@ function solve_direct_voltage(
     nᵢ = length(reduced.KiP)
     A, rhs = build_direct_voltage_system(reduced, ω, voltage)
     constrained = apply_direct_voltage_constraints(A, rhs, mechanical_dirichlet, nᵤ)
-    x, reduced_residual, solver_info = linear_solve(constrained)
+    x, reduced_residual, solver_info = linear_solve(constrained, solver)
 
     u = x[1:nᵤ]
     ϕᵢ = nᵢ == 0 ? Vector{eltype(x)}(undef, 0) : x[(nᵤ + 1):(nᵤ + nᵢ)]
@@ -121,22 +145,31 @@ function apply_direct_voltage_constraints(A, rhs, mechanical_dirichlet, nᵤ)
 end
 
 
-function linear_solve(system)
+function linear_solve(system, solver::AbstractLinearSolverConfig)
     if system.reduction === nothing
-        x = system.A \ system.rhs
+        x = solve_linear_system(solver, system.A, system.rhs)
         residual = system.A * x - system.rhs
-        solver_info = direct_voltage_solver_info(:backslash, system.A, system.rhs, residual)
+        solver_info = direct_voltage_solver_info(solver, system.A, system.rhs, residual)
 
         return x, residual, solver_info
     end
 
     reduction = system.reduction
-    x_free = reduction.A \ reduction.b
+    x_free = solve_linear_system(solver, reduction.A, reduction.b)
     residual = reduction.A * x_free - reduction.b
-    solver_info = direct_voltage_solver_info(:backslash, reduction.A, reduction.b, residual)
+    solver_info = direct_voltage_solver_info(solver, reduction.A, reduction.b, residual)
     x = reconstruct_solution(reduction, x_free)
 
     return x, residual, solver_info
+end
+
+
+solve_linear_system(::BackslashSolver, A, rhs) = A \ rhs
+
+function solve_linear_system(::FactorizedDirectSolver, A, rhs)
+    F = factorize(A)
+
+    return F \ rhs
 end
 
 
@@ -181,10 +214,18 @@ function reconstruct_potential(reduced::ElectrodeReducedKForm, internal_potentia
 end
 
 
-function direct_voltage_solver_info(method::Symbol, A, rhs, residual)
+solver_method(::BackslashSolver) = :backslash
+solver_method(::FactorizedDirectSolver) = :factorized_direct
+function direct_voltage_solver_info(solver::AbstractLinearSolverConfig, A, rhs, residual)
     rhs_norm = norm(rhs)
     residual_norm = norm(residual)
     relative_residual = iszero(rhs_norm) ? residual_norm : residual_norm / rhs_norm
 
-    return DirectVoltageSolverInfo(method, size(A), rhs_norm, residual_norm, relative_residual)
+    return DirectVoltageSolverInfo(
+        solver_method(solver),
+        size(A),
+        rhs_norm,
+        residual_norm,
+        relative_residual,
+    )
 end

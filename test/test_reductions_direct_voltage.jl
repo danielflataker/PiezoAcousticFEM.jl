@@ -67,6 +67,12 @@ end
     V0 = 2.5
 
     direct = PiezoAcousticFEM.solve_direct_voltage(reduced, ω, V0)
+    factorized_direct = PiezoAcousticFEM.solve_direct_voltage(
+        reduced,
+        ω,
+        V0;
+        solver=FactorizedDirectSolver(),
+    )
     D = h.Huu - ω^2 * h.Muu
     u_h = D \ (-h.Huϕ * V0)
     removed_electrode_row_residual = only(h.Hϕu * u_h) + h.Hϕϕ * V0
@@ -84,6 +90,9 @@ end
     @test direct.solver_info.method == :backslash
     @test direct.solver_info.matrix_size == (3, 3)
     @test direct.solver_info.reduced_relative_residual < 1.0e-12
+    @test factorized_direct.displacement ≈ direct.displacement
+    @test factorized_direct.admittance ≈ direct.admittance
+    @test factorized_direct.solver_info.method == :factorized_direct
     @test direct.potential[partition.internal] ≈ direct.internal_potential
     @test direct.potential[partition.driven] == fill(V0, length(partition.driven))
     @test direct.potential[partition.grounded] == zeros(length(partition.grounded))
@@ -240,3 +249,31 @@ end
     @test isfinite(result.admittance)
 end
 
+@testset "harmonic solve accepts solver config" begin
+    kin = AxisymmetricRZ()
+    mat = PZT5A()
+    ip = Lagrange{RefQuadrilateral,1}()
+    qr = QuadratureRule{RefQuadrilateral}(2)
+    grid = generate_grid(
+        Quadrilateral,
+        (1, 2),
+        Vec{2}((0.0, 0.0)),
+        Vec{2}((1.0e-3, 2.0e-3)),
+    )
+    problem = PiezoProblem(
+        grid,
+        mat,
+        kin,
+        ip,
+        qr;
+        electrodes=TwoTerminalElectrodes(FacetElectrode("top"), FacetElectrode("bottom")),
+        boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
+        loss=Lossless(),
+    )
+    analysis = HarmonicVoltageAnalysis(2π * 10_000.0, 1.0, :exp_iomega_t)
+
+    factorized = solve(problem, analysis; solver=FactorizedDirectSolver())
+
+    @test isfinite(factorized.solution.admittance)
+    @test factorized.solution.solver_info.method == :factorized_direct
+end

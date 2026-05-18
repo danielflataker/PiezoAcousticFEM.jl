@@ -147,11 +147,15 @@ end
 
 
 """
-    solve(problem, analysis)
+    solve(problem, analysis; solver=BackslashSolver())
 
 Assemble, prepare, and solve a `PiezoProblem` for the given analysis.
 """
-function solve(problem::PiezoProblem, analysis::HarmonicVoltageAnalysis)
+function solve(
+    problem::PiezoProblem,
+    analysis::HarmonicVoltageAnalysis;
+    solver::AbstractLinearSolverConfig=BackslashSolver(),
+)
     check_supported(problem.loss, analysis)
     assembled = assemble(problem)
     reduction = prepare_analysis(assembled, analysis)
@@ -162,6 +166,7 @@ function solve(problem::PiezoProblem, analysis::HarmonicVoltageAnalysis)
         mechanical_dirichlet=reduction.mechanical_dirichlet,
         analysis,
         convention=analysis.convention,
+        solver,
     )
 
     return HarmonicVoltageResult(
