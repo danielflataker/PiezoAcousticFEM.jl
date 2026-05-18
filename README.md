@@ -1,5 +1,8 @@
 # PiezoAcousticFEM.jl
 
+[![CI](https://github.com/danielflataker/PiezoAcousticFEM.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/danielflataker/PiezoAcousticFEM.jl/actions/workflows/CI.yml)
+[![Periodic CI](https://github.com/danielflataker/PiezoAcousticFEM.jl/actions/workflows/PeriodicCI.yml/badge.svg)](https://github.com/danielflataker/PiezoAcousticFEM.jl/actions/workflows/PeriodicCI.yml)
+
 PiezoAcousticFEM.jl is an early-stage Julia/Ferrite project for finite-element
 models of piezoelectric transducers. The current implementation focuses on a
 small, explicit core for axisymmetric piezoelectric solids in vacuum: assembly
