@@ -38,7 +38,7 @@ Build a homogeneous Dirichlet condition for `u_r` on the symmetry axis. `axis`
 must be an explicit `AxisBoundary`.
 """
 function axis_radial_displacement_constraint(assembly::KFormAssembly; axis::AxisBoundary, value=0)
-    axis_facets = resolve_facetset(ferrite_grid(assembly), axis)
+    axis_facets = resolve_facetset(ferrite_grid(assembly), axis; label="axis boundary facet set")
     indices = displacement_component_dofs_on_facets(assembly, axis_facets, :r)
 
     return DirichletDofs(indices, fill(value, length(indices)))
@@ -52,8 +52,8 @@ Build Kocbach's potential partition from explicit electrode objects.
 """
 function potential_partition(assembly::KFormAssembly; driven::FacetElectrode, grounded::FacetElectrode)
     grid = ferrite_grid(assembly)
-    driven_facets = resolve_facetset(grid, driven)
-    grounded_facets = resolve_facetset(grid, grounded)
+    driven_facets = resolve_facetset(grid, driven; label="driven electrode facet set")
+    grounded_facets = resolve_facetset(grid, grounded; label="grounded electrode facet set")
 
     p = potential_dofs_on_facets(assembly, driven_facets)
     g = potential_dofs_on_facets(assembly, grounded_facets)
@@ -72,8 +72,8 @@ homogeneous electric Dirichlet sets.
 """
 function short_circuit_partition(assembly::KFormAssembly, electrodes::TwoTerminalElectrodes)
     grid = ferrite_grid(assembly)
-    signal_facets = resolve_facetset(grid, electrodes.signal)
-    reference_facets = resolve_facetset(grid, electrodes.reference)
+    signal_facets = resolve_facetset(grid, electrodes.signal; label="signal electrode facet set")
+    reference_facets = resolve_facetset(grid, electrodes.reference; label="reference electrode facet set")
 
     signal = potential_dofs_on_facets(assembly, signal_facets)
     reference = potential_dofs_on_facets(assembly, reference_facets)

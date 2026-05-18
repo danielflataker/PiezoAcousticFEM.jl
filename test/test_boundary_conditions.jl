@@ -89,6 +89,11 @@ end
     @test_throws ArgumentError PiezoAcousticFEM.HarmonicVoltageDofPartition(6, [3], [5, 6], [1, 2])
     @test_throws ArgumentError PiezoAcousticFEM.HarmonicVoltageDofPartition(6, [3, 3], [5, 6], [1, 2])
     @test_throws ArgumentError PiezoAcousticFEM.HarmonicVoltageDofPartition(6, [3, 4], [6, 7], [1, 2])
+    @test_throws ArgumentError PiezoAcousticFEM.potential_partition(
+        through_thickness_assembly;
+        driven=FacetElectrode("missing"),
+        grounded=FacetElectrode("bottom"),
+    )
 
     short_partition = PiezoAcousticFEM.short_circuit_partition(
         through_thickness_assembly,
@@ -124,6 +129,10 @@ end
     @test PiezoAcousticFEM.compact_potential_node_dof(assembly.dofmap, 1) == 1
     @test axis_constraint.indices == radial
     @test axis_constraint.values == zeros(length(radial))
+    @test_throws ArgumentError PiezoAcousticFEM.axis_radial_displacement_constraint(
+        assembly;
+        axis=AxisBoundary(FacetBoundary("missing")),
+    )
 
     x_free = ones(length(assembly.dofmap.u_dofs) - length(radial))
     reduction = PiezoAcousticFEM.DirichletReduction(
@@ -138,4 +147,3 @@ end
     @test full_u[radial] == axis_constraint.values
     @test all(==(1.0), full_u[axial])
 end
-

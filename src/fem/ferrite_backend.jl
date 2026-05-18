@@ -98,8 +98,18 @@ end
 
 scalar_base_interpolation(interpolation) = interpolation.ip
 
-function resolve_facetset(grid, boundary_or_electrode)
-    return _resolve_facetset(grid, boundary_or_electrode)
+function resolve_facetset(grid, boundary_or_electrode; label="facet set")
+    facetset = try
+        _resolve_facetset(grid, boundary_or_electrode)
+    catch err
+        err isa KeyError || rethrow()
+        throw(ArgumentError("$label $(err.key) does not exist"))
+    end
+
+    isempty(facetset) &&
+        throw(ArgumentError("$label must contain at least one facet"))
+
+    return facetset
 end
 
 _resolve_facetset(grid, electrode::FacetElectrode{<:AbstractString}) =

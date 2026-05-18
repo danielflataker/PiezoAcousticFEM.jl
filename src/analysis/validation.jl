@@ -93,15 +93,5 @@ end
 
 
 function _validated_facetset(grid, boundary_or_electrode, label::AbstractString)
-    facetset = try
-        resolve_facetset(grid, boundary_or_electrode)
-    catch err
-        err isa KeyError || rethrow()
-        throw(ArgumentError("$label facet set $(err.key) does not exist"))
-    end
-
-    isempty(facetset) &&
-        throw(ArgumentError("$label facet set must contain at least one facet"))
-
-    return facetset
+    return resolve_facetset(grid, boundary_or_electrode; label="$label facet set")
 end
