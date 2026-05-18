@@ -170,6 +170,26 @@ function solve(
     check_supported(problem.loss, analysis)
     assembled = assemble(problem)
     reduction = prepare_analysis(assembled, analysis)
+
+    return solve(reduction, analysis; solver)
+end
+
+
+"""
+    solve(reduction, analysis; solver=BackslashSolver())
+
+Solve a prepared harmonic voltage reduction. This reuses assembly, electrode
+reduction, and mechanical constraints across analyses with the same problem
+layout.
+"""
+function solve(
+    reduction::HarmonicVoltageReduction,
+    analysis::HarmonicVoltageAnalysis;
+    solver::AbstractLinearSolverConfig=BackslashSolver(),
+)
+    assembled = reduction.assembled
+    problem = assembled.problem
+    check_supported(problem.loss, analysis)
     solution = solve_direct_voltage(
         reduction.reduced,
         analysis.ω,
@@ -183,7 +203,7 @@ function solve(
     return HarmonicVoltageResult(
         problem,
         analysis,
-        assembled,
+        reduction.assembled,
         reduction,
         solution,
     )

@@ -24,6 +24,7 @@
     assembled = assemble(problem)
     reduction = prepare_analysis(assembled, analysis)
     result = solve(problem, analysis)
+    prepared_result = solve(reduction, analysis)
 
     @test problem.material_source === mat
     @test problem.loss isa Lossless
@@ -61,6 +62,10 @@
     @test result.analysis === analysis
     @test result.solution.analysis === analysis
     @test result.solution.convention == analysis.convention
+    @test prepared_result.problem === problem
+    @test prepared_result.assembled === assembled
+    @test prepared_result.reduction === reduction
+    @test prepared_result.solution.admittance ≈ result.solution.admittance
     explicit_solution = PiezoAcousticFEM.solve_direct_voltage(
         reduction.reduced,
         analysis.ω,
