@@ -118,7 +118,11 @@ end
     FrequencySweepResult
 
 Result container for a sweep of harmonic voltage analyses that share one
-assembled problem and one prepared harmonic reduction.
+assembled problem and one prepared harmonic reduction. `reuse_level` is a
+conservative description of the sweep inputs, not a promise that all possible
+solver caches were reused: `:frequency_change` means voltage and convention are
+fixed across the sweep, while `:analysis_change` means at least one other
+analysis input changed.
 """
 struct FrequencySweepResult{P,A,AP,R,RS}
     problem::P
@@ -126,6 +130,7 @@ struct FrequencySweepResult{P,A,AP,R,RS}
     assembled::AP
     reduction::R
     results::RS
+    reuse_level::Symbol
 end
 
 
@@ -265,5 +270,16 @@ function solve(
         reduction.assembled,
         reduction,
         results,
+        harmonic_reuse_level(analyses),
     )
+end
+
+
+function harmonic_reuse_level(analyses::AbstractVector{<:HarmonicVoltageAnalysis})
+    reference = first(analyses)
+
+    all(analysis -> analysis.voltage == reference.voltage && analysis.convention == reference.convention, analyses) &&
+        return :frequency_change
+
+    return :analysis_change
 end

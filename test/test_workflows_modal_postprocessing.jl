@@ -78,7 +78,13 @@
     @test sweep.reduction === reduction
     @test length(sweep.results) == length(sweep_analyses)
     @test all(result -> result.reduction === reduction, sweep.results)
+    @test sweep.reuse_level == :frequency_change
     @test_throws ArgumentError solve(reduction, HarmonicVoltageAnalysis[])
+    voltage_sweep = solve(reduction, [
+        HarmonicVoltageAnalysis(2π * 10_000.0, voltage, :exp_iomega_t)
+        for voltage in (1.0, 2.0)
+    ])
+    @test voltage_sweep.reuse_level == :analysis_change
     explicit_solution = PiezoAcousticFEM.solve_direct_voltage(
         reduction.reduced,
         analysis.ω,
