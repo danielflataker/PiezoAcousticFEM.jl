@@ -63,6 +63,17 @@ struct HarmonicVoltageAnalysis{W,V,C}
     ω::W
     voltage::V
     convention::C
+
+    function HarmonicVoltageAnalysis(ω, voltage, convention)
+        isfinite(ω) && ω > zero(ω) ||
+            throw(ArgumentError("harmonic angular frequency ω must be positive and finite"))
+        isfinite(voltage) && !iszero(voltage) ||
+            throw(ArgumentError("harmonic voltage must be finite and nonzero"))
+        convention === :exp_iomega_t ||
+            throw(ArgumentError("unsupported harmonic convention $convention; expected :exp_iomega_t"))
+
+        return new{typeof(ω),typeof(voltage),typeof(convention)}(ω, voltage, convention)
+    end
 end
 
 

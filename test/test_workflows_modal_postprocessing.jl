@@ -207,6 +207,13 @@ end
     @test_throws ArgumentError solve(as_given_problem, analysis)
 end
 
+@testset "short-circuit modal analysis validates constructor arguments" begin
+    @test ShortCircuitModalAnalysis(nothing).nev === nothing
+    @test ShortCircuitModalAnalysis(0).nev == 0
+    @test_throws ArgumentError ShortCircuitModalAnalysis(-1)
+    @test_throws ArgumentError ShortCircuitModalAnalysis(1.5)
+end
+
 @testset "VTK solution output" begin
     kin = AxisymmetricRZ()
     mat = PZT5A()

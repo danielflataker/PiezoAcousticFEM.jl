@@ -278,6 +278,14 @@ end
     @test factorized.solution.solver_info.method == :factorized_direct
 end
 
+@testset "harmonic analysis validates constructor arguments" begin
+    @test_throws ArgumentError HarmonicVoltageAnalysis(0.0, 1.0, :exp_iomega_t)
+    @test_throws ArgumentError HarmonicVoltageAnalysis(Inf, 1.0, :exp_iomega_t)
+    @test_throws ArgumentError HarmonicVoltageAnalysis(1.0, 0.0, :exp_iomega_t)
+    @test_throws ArgumentError HarmonicVoltageAnalysis(1.0, Inf, :exp_iomega_t)
+    @test_throws ArgumentError HarmonicVoltageAnalysis(1.0, 1.0, :exp_minus_iomega_t)
+end
+
 @testset "large direct solve residual warns" begin
     info = PiezoAcousticFEM.DirectVoltageSolverInfo(
         :backslash,

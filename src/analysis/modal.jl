@@ -7,6 +7,15 @@ modes.
 """
 struct ShortCircuitModalAnalysis{N}
     nev::N
+
+    function ShortCircuitModalAnalysis(nev)
+        if nev !== nothing
+            isa(nev, Integer) || throw(ArgumentError("nev must be an integer or nothing"))
+            nev >= 0 || throw(ArgumentError("nev must be nonnegative"))
+        end
+
+        return new{typeof(nev)}(nev)
+    end
 end
 
 
