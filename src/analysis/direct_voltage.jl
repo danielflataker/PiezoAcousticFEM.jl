@@ -150,6 +150,7 @@ function linear_solve(system, solver::AbstractLinearSolverConfig)
         x = solve_linear_system(solver, system.A, system.rhs)
         residual = system.A * x - system.rhs
         solver_info = direct_voltage_solver_info(solver, system.A, system.rhs, residual)
+        warn_large_direct_voltage_residual(solver_info)
 
         return x, residual, solver_info
     end
@@ -158,6 +159,7 @@ function linear_solve(system, solver::AbstractLinearSolverConfig)
     x_free = solve_linear_system(solver, reduction.A, reduction.b)
     residual = reduction.A * x_free - reduction.b
     solver_info = direct_voltage_solver_info(solver, reduction.A, reduction.b, residual)
+    warn_large_direct_voltage_residual(solver_info)
     x = reconstruct_solution(reduction, x_free)
 
     return x, residual, solver_info
@@ -228,4 +230,18 @@ function direct_voltage_solver_info(solver::AbstractLinearSolverConfig, A, rhs, 
         residual_norm,
         relative_residual,
     )
+end
+
+
+function warn_large_direct_voltage_residual(info::DirectVoltageSolverInfo)
+    T = typeof(float(real(info.reduced_relative_residual)))
+    threshold = sqrt(eps(T))
+    info.reduced_relative_residual <= threshold && return nothing
+
+    method = info.method
+    matrix_size = info.matrix_size
+    relative_residual = info.reduced_relative_residual
+    @warn "direct voltage solve returned a large reduced residual" method matrix_size relative_residual threshold
+
+    return nothing
 end

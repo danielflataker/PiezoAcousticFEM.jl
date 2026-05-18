@@ -277,3 +277,15 @@ end
     @test isfinite(factorized.solution.admittance)
     @test factorized.solution.solver_info.method == :factorized_direct
 end
+
+@testset "large direct solve residual warns" begin
+    info = PiezoAcousticFEM.DirectVoltageSolverInfo(
+        :backslash,
+        (1, 1),
+        1.0,
+        1.0e-3,
+        1.0e-3,
+    )
+
+    @test_logs (:warn, "direct voltage solve returned a large reduced residual") PiezoAcousticFEM.warn_large_direct_voltage_residual(info)
+end
