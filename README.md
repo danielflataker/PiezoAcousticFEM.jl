@@ -50,3 +50,11 @@ Not yet implemented:
 This repository is not yet a stable public API. Expect names, exports, and
 result types to change while the material contract, validation cases, and public
 documentation are being tightened.
+
+## Example
+
+Run the current public harmonic-voltage workflow with:
+
+```sh
+julia --project=. examples/disk_harmonic_voltage.jl
+```
