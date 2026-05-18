@@ -6,15 +6,22 @@ on:
       - main
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '23 3 * * 1'
 
 permissions:
   actions: write
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Tests (Julia ${{ matrix.julia-version }})
     runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
     strategy:
       fail-fast: false
       matrix:
@@ -32,6 +39,7 @@ jobs:
   test-lower-bounds:
     name: Test lower compat bounds
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     strategy:
       fail-fast: false
       matrix:
@@ -53,6 +61,7 @@ jobs:
   test-experimental:
     name: Tests (Julia nightly)
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     continue-on-error: true
 
     steps:
