@@ -66,6 +66,19 @@
     @test prepared_result.assembled === assembled
     @test prepared_result.reduction === reduction
     @test prepared_result.solution.admittance ≈ result.solution.admittance
+    sweep_analyses = [
+        HarmonicVoltageAnalysis(2π * f, 1.0, :exp_iomega_t)
+        for f in (10_000.0, 12_000.0)
+    ]
+    sweep = solve(reduction, sweep_analyses)
+    @test sweep isa FrequencySweepResult
+    @test sweep.problem === problem
+    @test sweep.analyses === sweep_analyses
+    @test sweep.assembled === assembled
+    @test sweep.reduction === reduction
+    @test length(sweep.results) == length(sweep_analyses)
+    @test all(result -> result.reduction === reduction, sweep.results)
+    @test_throws ArgumentError solve(reduction, HarmonicVoltageAnalysis[])
     explicit_solution = PiezoAcousticFEM.solve_direct_voltage(
         reduction.reduced,
         analysis.ω,

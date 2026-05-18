@@ -115,6 +115,21 @@ end
 
 
 """
+    FrequencySweepResult
+
+Result container for a sweep of harmonic voltage analyses that share one
+assembled problem and one prepared harmonic reduction.
+"""
+struct FrequencySweepResult{P,A,AP,R,RS}
+    problem::P
+    analyses::A
+    assembled::AP
+    reduction::R
+    results::RS
+end
+
+
+"""
     assemble(problem)
 
 Build the formulation/loss-specific material and assemble the sparse K-form.
@@ -206,5 +221,49 @@ function solve(
         reduction.assembled,
         reduction,
         solution,
+    )
+end
+
+
+"""
+    solve(problem, analyses; solver=BackslashSolver())
+
+Assemble, prepare once, and solve a collection of harmonic voltage analyses.
+"""
+function solve(
+    problem::PiezoProblem,
+    analyses::AbstractVector{<:HarmonicVoltageAnalysis};
+    solver::AbstractLinearSolverConfig=BackslashSolver(),
+)
+    isempty(analyses) && throw(ArgumentError("frequency sweep analyses must not be empty"))
+    check_supported(problem.loss, first(analyses))
+    assembled = assemble(problem)
+    reduction = prepare_analysis(assembled, first(analyses))
+
+    return solve(reduction, analyses; solver)
+end
+
+
+"""
+    solve(reduction, analyses; solver=BackslashSolver())
+
+Solve a collection of harmonic voltage analyses with one prepared reduction.
+This reuses assembly, electrode reduction, and mechanical constraints across
+the sweep.
+"""
+function solve(
+    reduction::HarmonicVoltageReduction,
+    analyses::AbstractVector{<:HarmonicVoltageAnalysis};
+    solver::AbstractLinearSolverConfig=BackslashSolver(),
+)
+    isempty(analyses) && throw(ArgumentError("frequency sweep analyses must not be empty"))
+    results = [solve(reduction, analysis; solver) for analysis in analyses]
+
+    return FrequencySweepResult(
+        reduction.assembled.problem,
+        analyses,
+        reduction.assembled,
+        reduction,
+        results,
     )
 end

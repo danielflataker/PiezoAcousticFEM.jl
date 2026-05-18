@@ -47,7 +47,7 @@ export FacetBoundary, AxisBoundary, AxisymmetricBoundaryConditions
 export PiezoProblem, HarmonicVoltageAnalysis, ShortCircuitModalAnalysis
 export AbstractLinearSolverConfig, BackslashSolver, FactorizedDirectSolver
 export solve, assemble, prepare_analysis, validate
-export HarmonicVoltageResult, ShortCircuitModalResult
+export HarmonicVoltageResult, FrequencySweepResult, ShortCircuitModalResult
 export AbstractObservable, AdmittanceObservable, ChargeObservable, CurrentObservable
 export ModalFrequenciesObservable, evaluate
 export reconstruct_field_dofs, reconstruct_fields, write_vtk
