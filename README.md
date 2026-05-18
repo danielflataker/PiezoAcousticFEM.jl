@@ -31,8 +31,15 @@ Not yet implemented:
 - acoustic/fluid domains, radiation, or fluid loading;
 - passive elastic domains and full transducer stacks;
 - broad mesh/import workflows comparable to mature FEM tools;
-- validated public examples, documentation, benchmarks, or independent
-  benchmark comparisons.
+- generated documentation, benchmarks, or independent benchmark comparisons.
+
+## Validation Status
+
+The test suite currently checks material constants, element assembly, boundary
+and electrode validation, direct voltage solves, modal reference behavior,
+observables, VTK output, and the public example script. These tests are useful
+regressions for the current axisymmetric piezoelectric-vacuum core. Independent
+benchmark comparisons are still future work.
 
 ## References
 
