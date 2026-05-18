@@ -115,14 +115,38 @@ end
 
 
 """
+    HarmonicSweepPointResult
+
+Per-analysis result for a harmonic frequency sweep. Successful points have
+`status == :success`, a `HarmonicVoltageResult` in `result`, and `error ===
+nothing`. Failed points have `status == :failed`, `result === nothing`, and
+the caught exception in `error`.
+"""
+struct HarmonicSweepPointResult{A,S,R,E}
+    analysis::A
+    status::S
+    result::R
+    error::E
+end
+
+
+successful_sweep_point(analysis::HarmonicVoltageAnalysis, result::HarmonicVoltageResult) =
+    HarmonicSweepPointResult(analysis, :success, result, nothing)
+
+failed_sweep_point(analysis::HarmonicVoltageAnalysis, error) =
+    HarmonicSweepPointResult(analysis, :failed, nothing, error)
+
+
+"""
     FrequencySweepResult
 
 Result container for a sweep of harmonic voltage analyses that share one
-assembled problem and one prepared harmonic reduction. `reuse_level` is a
-conservative description of the sweep inputs, not a promise that all possible
-solver caches were reused: `:frequency_change` means voltage and convention are
-fixed across the sweep, while `:analysis_change` means at least one other
-analysis input changed.
+assembled problem and one prepared harmonic reduction. `results` contains one
+`HarmonicSweepPointResult` per analysis, so failed solve points can be recorded
+without aborting the whole sweep. `reuse_level` is a conservative description
+of the sweep inputs, not a promise that all possible solver caches were reused:
+`:frequency_change` means voltage and convention are fixed across the sweep,
+while `:analysis_change` means at least one other analysis input changed.
 """
 struct FrequencySweepResult{P,A,AP,R,RS}
     problem::P
@@ -262,7 +286,7 @@ function solve(
     solver::AbstractLinearSolverConfig=BackslashSolver(),
 )
     isempty(analyses) && throw(ArgumentError("frequency sweep analyses must not be empty"))
-    results = [solve(reduction, analysis; solver) for analysis in analyses]
+    results = [solve_sweep_point(reduction, analysis; solver) for analysis in analyses]
 
     return FrequencySweepResult(
         reduction.assembled.problem,
@@ -272,6 +296,21 @@ function solve(
         results,
         harmonic_reuse_level(analyses),
     )
+end
+
+
+function solve_sweep_point(
+    reduction::HarmonicVoltageReduction,
+    analysis::HarmonicVoltageAnalysis;
+    solver::AbstractLinearSolverConfig,
+)
+    try
+        return successful_sweep_point(analysis, solve(reduction, analysis; solver))
+    catch err
+        err isa InterruptException && rethrow()
+
+        return failed_sweep_point(analysis, err)
+    end
 end
 
 

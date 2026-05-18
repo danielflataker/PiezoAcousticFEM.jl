@@ -1,3 +1,19 @@
+mutable struct FailsSecondLinearSolve <: AbstractLinearSolverConfig
+    calls::Int
+end
+
+FailsSecondLinearSolve() = FailsSecondLinearSolve(0)
+
+PiezoAcousticFEM.solver_method(::FailsSecondLinearSolve) = :fails_second_linear_solve
+
+function PiezoAcousticFEM.solve_linear_system(solver::FailsSecondLinearSolve, A, rhs)
+    solver.calls += 1
+    solver.calls == 2 && throw(ErrorException("intentional sweep failure"))
+
+    return A \ rhs
+end
+
+
 @testset "axisymmetric direct voltage workflow smoke test" begin
     kin = AxisymmetricRZ()
     mat = PZT5A()
@@ -77,7 +93,10 @@
     @test sweep.assembled === assembled
     @test sweep.reduction === reduction
     @test length(sweep.results) == length(sweep_analyses)
-    @test all(result -> result.reduction === reduction, sweep.results)
+    @test all(point -> point isa HarmonicSweepPointResult, sweep.results)
+    @test all(point -> point.status == :success, sweep.results)
+    @test all(point -> point.error === nothing, sweep.results)
+    @test all(point -> point.result.reduction === reduction, sweep.results)
     @test sweep.reuse_level == :frequency_change
     @test_throws ArgumentError solve(reduction, HarmonicVoltageAnalysis[])
     voltage_sweep = solve(reduction, [
@@ -85,6 +104,17 @@
         for voltage in (1.0, 2.0)
     ])
     @test voltage_sweep.reuse_level == :analysis_change
+
+    failing_solver = FailsSecondLinearSolve()
+    failed_sweep = solve(reduction, sweep_analyses; solver=failing_solver)
+    @test failed_sweep.results[1].status == :success
+    @test failed_sweep.results[1].result isa HarmonicVoltageResult
+    @test failed_sweep.results[1].error === nothing
+    @test failed_sweep.results[2].status == :failed
+    @test failed_sweep.results[2].result === nothing
+    @test failed_sweep.results[2].error isa ErrorException
+    @test failed_sweep.results[2].analysis === sweep_analyses[2]
+
     explicit_solution = PiezoAcousticFEM.solve_direct_voltage(
         reduction.reduced,
         analysis.ω,
