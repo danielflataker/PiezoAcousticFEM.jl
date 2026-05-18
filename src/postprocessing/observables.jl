@@ -8,28 +8,31 @@ abstract type AbstractObservable end
 """
     AdmittanceObservable()
 
-Extract the driven-electrode admittance from a harmonic voltage result.
+Extract the driven-terminal admittance from a harmonic voltage result, in
+siemens. The value follows the result's harmonic time convention.
 """
 struct AdmittanceObservable <: AbstractObservable end
 
 """
     ChargeObservable()
 
-Extract the driven-electrode charge from a harmonic voltage result.
+Extract the driven-terminal total charge from a harmonic voltage result, in
+coulombs. The axisymmetric integration factor is already included.
 """
 struct ChargeObservable <: AbstractObservable end
 
 """
     CurrentObservable()
 
-Extract the driven-electrode current from a harmonic voltage result.
+Extract the driven-terminal current from a harmonic voltage result, in amperes.
+The value follows the result's harmonic time convention.
 """
 struct CurrentObservable <: AbstractObservable end
 
 """
     ModalFrequenciesObservable()
 
-Extract modal frequencies in Hz from a short-circuit modal result.
+Extract modal frequencies from a short-circuit modal result, in hertz.
 """
 struct ModalFrequenciesObservable <: AbstractObservable end
 

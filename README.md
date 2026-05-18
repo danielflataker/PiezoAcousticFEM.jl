@@ -15,6 +15,9 @@ This package aims to provide a clear, testable, package-oriented workflow:
 explicit problem objects, assembly, analysis preparation, result objects,
 observables, and reproducible validation tests.
 
+All public numeric inputs and outputs use SI units unless a docstring explicitly
+states otherwise.
+
 ## Current Scope
 
 Implemented or in progress:
