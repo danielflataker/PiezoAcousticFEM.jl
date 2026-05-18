@@ -16,6 +16,10 @@ dist/
 *.jld2
 *.csv
 
+# Local/private working material
+private/
+scratch/
+
 # Docs/build artifacts
 docs/build/
 *.pdf
