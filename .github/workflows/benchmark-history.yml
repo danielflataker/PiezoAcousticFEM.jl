@@ -1,0 +1,47 @@
+name: Benchmark History
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    name: Record benchmark history
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+
+      - uses: julia-actions/cache@v2
+
+      - name: Run benchmarks
+        run: julia benchmark/runbenchmarks.jl benchmark-output
+
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-output
+          path: benchmark-output
+
+      - name: Publish benchmark history
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: benchmarks
+          publish_dir: benchmark-output
+          keep_files: true
+          commit_message: Record benchmark result for ${{ github.sha }}
