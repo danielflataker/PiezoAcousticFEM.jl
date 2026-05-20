@@ -2,13 +2,15 @@
     write_vtk(filename, grid, fields)
 
 Write reconstructed nodal fields to a VTK `.vtu` file. Complex fields are
-exported as explicit real/imag/abs/phase components.
+exported as explicit real/imag/abs/phase components. Field-data metadata
+records basic units and output interpretation.
 """
-function write_vtk(filename::AbstractString, grid, fields)
+function write_vtk(filename::AbstractString, grid, fields; metadata=nothing)
     VTKGridFile(String(filename), grid) do vtk
         write_displacement_data(vtk, fields.displacement)
         write_potential_data(vtk, fields.potential)
         write_node_data(vtk, fields.radius, "radius")
+        write_vtk_metadata(vtk, vtk_metadata(fields; metadata))
     end
 
     return String(filename) * ".vtu"
@@ -23,8 +25,12 @@ VTK `.vtu` file.
 function write_vtk(filename::AbstractString, result::HarmonicVoltageResult)
     grid = result.problem.grid
     fields = reconstruct_fields(result)
+    metadata = (
+        harmonic_convention=string(result.analysis.convention),
+        quantity_interpretation="complex amplitude",
+    )
 
-    return write_vtk(filename, grid, fields)
+    return write_vtk(filename, grid, fields; metadata)
 end
 
 """
@@ -36,8 +42,45 @@ Reconstruct nodal fields for one short-circuit mode and write them to a VTK
 function write_vtk(filename::AbstractString, result::ShortCircuitModalResult; mode_index::Integer=1)
     grid = result.assembled.problem.grid
     fields = reconstruct_fields(result, mode_index)
+    metadata = (
+        modal_normalization=string(fields.normalization),
+        mode_index=string(mode_index),
+        quantity_interpretation="mode shape",
+    )
 
-    return write_vtk(filename, grid, fields)
+    return write_vtk(filename, grid, fields; metadata)
+end
+
+function vtk_metadata(fields; metadata=nothing)
+    entries = Dict{String,String}(
+        "piezoacousticfem_output_kind" => "nodal_fields",
+        "piezoacousticfem_displacement_unit" => "m",
+        "piezoacousticfem_potential_unit" => "V",
+        "piezoacousticfem_radius_unit" => "m",
+        "piezoacousticfem_phase_unit" => "rad",
+        "piezoacousticfem_component_convention" =>
+            "complex fields are exported as real, imaginary, absolute-value, and phase nodal arrays",
+    )
+
+    if hasproperty(fields, :normalization)
+        entries["piezoacousticfem_modal_normalization"] = string(fields.normalization)
+    end
+
+    metadata === nothing && return entries
+
+    for (key, value) in pairs(metadata)
+        entries["piezoacousticfem_$(key)"] = string(value)
+    end
+
+    return entries
+end
+
+function write_vtk_metadata(vtk, metadata)
+    for name in sort!(collect(keys(metadata)))
+        vtk.vtk[name, VTKFieldData()] = metadata[name]
+    end
+
+    return vtk
 end
 
 function write_displacement_data(vtk, displacement)

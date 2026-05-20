@@ -300,6 +300,10 @@ end
     @test filesize(filename) > 0
     @test isfile(result_filename)
     @test filesize(result_filename) > 0
+    @test occursin("piezoacousticfem_displacement_unit", read(filename, String))
+    result_vtk_text = read(result_filename, String)
+    @test occursin("piezoacousticfem_harmonic_convention", result_vtk_text)
+    @test occursin("piezoacousticfem_quantity_interpretation", result_vtk_text)
     @test length(fields.displacement) == getnnodes(grid)
     @test length(fields.potential) == getnnodes(grid)
     @test length(fields.radius) == getnnodes(grid)
@@ -337,6 +341,8 @@ end
 
     @test isfile(filename)
     @test isfile(result_filename)
+    @test occursin("piezoacousticfem_modal_normalization", read(result_filename, String))
+    @test occursin("piezoacousticfem_mode_index", read(result_filename, String))
     @test length(fields.displacement) == getnnodes(grid)
     @test length(fields.potential) == getnnodes(grid)
 
