@@ -21,6 +21,86 @@ struct ElementDerivedFieldOutput{R,X,U,P,GU,GP,S,E,T,D,M}
 end
 
 """
+    sample_element_fields(..., cellid; samples_per_axis=5)
+
+Evaluate derived fields on a tensor-product lattice of reference points inside
+one element. This is a per-element visualization/sample primitive; it does not
+locate arbitrary physical points or project values to nodes.
+"""
+function sample_element_fields(
+    assembled::AssembledPiezoProblem,
+    fields::CompactFieldDofs,
+    cellid::Integer;
+    samples_per_axis=5,
+)
+    return sample_element_fields(
+        assembled.assembly,
+        assembled.material,
+        assembled.problem.formulation,
+        assembled.problem.interpolation,
+        fields,
+        cellid;
+        samples_per_axis,
+        metadata=merge_sampled_field_metadata(fields.metadata, samples_per_axis),
+    )
+end
+
+
+function sample_element_fields(
+    result::HarmonicVoltageResult,
+    cellid::Integer;
+    samples_per_axis=5,
+)
+    fields = reconstruct_field_dofs(result)
+
+    return sample_element_fields(
+        result.assembled.assembly,
+        result.assembled.material,
+        result.problem.formulation,
+        result.problem.interpolation,
+        fields,
+        cellid;
+        samples_per_axis,
+        metadata=merge_sampled_field_metadata(
+            merge(
+                fields.metadata,
+                (
+                    analysis=:harmonic_voltage,
+                    harmonic_convention=result.analysis.convention,
+                    quantity_interpretation="complex amplitude",
+                ),
+            ),
+            samples_per_axis,
+        ),
+    )
+end
+
+
+function sample_element_fields(
+    assembly::KFormAssembly,
+    material::AxisymmetricRZPiezoMaterial,
+    formulation::AxisymmetricRZ,
+    interpolation,
+    fields::CompactFieldDofs,
+    cellid::Integer;
+    samples_per_axis=5,
+    metadata=merge_sampled_field_metadata(fields.metadata, samples_per_axis),
+)
+    reference_points = reference_sample_points(formulation, samples_per_axis)
+
+    return evaluate_derived_fields(
+        assembly,
+        material,
+        formulation,
+        interpolation,
+        fields,
+        cellid,
+        reference_points;
+        metadata,
+    )
+end
+
+"""
     evaluate_derived_fields(assembled, fields, cellid, reference_points)
     evaluate_derived_fields(result, cellid, reference_points)
 
@@ -188,6 +268,46 @@ function merge_derived_field_metadata(metadata)
             electric_displacement_units="C/m^2",
         ),
     )
+end
+
+
+function merge_sampled_field_metadata(metadata, samples_per_axis)
+    return merge(
+        merge_derived_field_metadata(metadata),
+        (
+            output_kind=:element_sampled_fields,
+            evaluation=:reference_lattice,
+            samples_per_axis=normalize_samples_per_axis(samples_per_axis),
+        ),
+    )
+end
+
+
+function reference_sample_points(::AxisymmetricRZ, samples_per_axis)
+    nr, nz = normalize_samples_per_axis(samples_per_axis)
+    ξr = range(-1.0, 1.0; length=nr)
+    ξz = range(-1.0, 1.0; length=nz)
+
+    return [Vec{2}((r, z)) for z in ξz for r in ξr]
+end
+
+
+function normalize_samples_per_axis(samples_per_axis::Integer)
+    samples_per_axis >= 2 ||
+        throw(ArgumentError("samples_per_axis must be at least 2, got $samples_per_axis"))
+
+    return (Int(samples_per_axis), Int(samples_per_axis))
+end
+
+
+function normalize_samples_per_axis(samples_per_axis)
+    length(samples_per_axis) == 2 ||
+        throw(ArgumentError("samples_per_axis must be an integer or a length-2 tuple/vector"))
+    nr, nz = samples_per_axis
+    nr >= 2 && nz >= 2 ||
+        throw(ArgumentError("samples_per_axis entries must be at least 2, got $samples_per_axis"))
+
+    return (Int(nr), Int(nz))
 end
 
 

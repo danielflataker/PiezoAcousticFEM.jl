@@ -52,6 +52,6 @@ export HarmonicVoltageResult, HarmonicSweepPointResult, FrequencySweepResult, Sh
 export AbstractObservable, AdmittanceObservable, ChargeObservable, CurrentObservable
 export ModalFrequenciesObservable, evaluate
 export CompactFieldDofs, NodalFieldOutput, ElementDerivedFieldOutput
-export reconstruct_field_dofs, reconstruct_fields, evaluate_derived_fields, write_vtk
+export reconstruct_field_dofs, reconstruct_fields, evaluate_derived_fields, sample_element_fields, write_vtk
 
 end
