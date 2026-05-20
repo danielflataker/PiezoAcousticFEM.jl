@@ -2,7 +2,6 @@
 
 [![Core tests](https://github.com/danielflataker/PiezoAcousticFEM.jl/actions/workflows/core-tests.yml/badge.svg)](https://github.com/danielflataker/PiezoAcousticFEM.jl/actions/workflows/core-tests.yml)
 [![Weekly tests](https://github.com/danielflataker/PiezoAcousticFEM.jl/actions/workflows/weekly-tests.yml/badge.svg)](https://github.com/danielflataker/PiezoAcousticFEM.jl/actions/workflows/weekly-tests.yml)
-[![Piezo pipeline benchmark](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/danielflataker/PiezoAcousticFEM.jl/benchmarks/badge/piezo-pipeline.json)](https://github.com/danielflataker/PiezoAcousticFEM.jl/actions/workflows/benchmark-history.yml)
 
 PiezoAcousticFEM.jl is an early-stage Julia/Ferrite project for finite-element
 models of piezoelectric transducers. The current implementation focuses on a
