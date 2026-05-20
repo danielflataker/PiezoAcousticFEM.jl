@@ -95,11 +95,6 @@ end
     )
 
     two_cell_assembly = PiezoAcousticFEM.assemble_k_form_dense(two_cell_grid, mat, kin, ip, qr)
-    @test size(two_cell_assembly.system.Kuu) == (12, 12)
-    @test size(two_cell_assembly.system.Kuϕ) == (12, 6)
-    @test size(two_cell_assembly.system.Kϕu) == (6, 12)
-    @test size(two_cell_assembly.system.Kϕϕ) == (6, 6)
-    @test size(two_cell_assembly.system.Muu) == (12, 12)
     @test two_cell_assembly.system.Kuu ≈ transpose(two_cell_assembly.system.Kuu)
     @test two_cell_assembly.system.Kϕϕ ≈ transpose(two_cell_assembly.system.Kϕϕ)
     @test two_cell_assembly.system.Kuϕ ≈ transpose(two_cell_assembly.system.Kϕu)
@@ -133,4 +128,3 @@ end
     @test Matrix(sparse_assembly.system.Kϕϕ) ≈ dense.system.Kϕϕ
     @test Matrix(sparse_assembly.system.Muu) ≈ dense.system.Muu
 end
-

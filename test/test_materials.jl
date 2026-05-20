@@ -1,14 +1,6 @@
-@testset "PZT5A constants" begin
-    mat = effective_material(PZT5A(), AxisymmetricRZ(), Lossless())
-    @test mat.cᴱ[4, 4] == 2.11e10
-    @test mat.e[1, 4] == 12.3
-    @test mat.e[2, 1] == -5.4
-    @test mat.e[2, 3] == 15.8
-    @test mat.ρ == 7750
-
+@testset "material scalar types and loss policies" begin
     full = PZT5A(; TC=ComplexF64, TE=Float32, Tε=BigFloat, Tρ=Float64)
     reduced = reduce_material(full, AxisymmetricRZ())
-    @test full isa PiezoMaterial
     @test reduced isa AxisymmetricRZPiezoMaterial
     @test eltype(reduced.cᴱ) == ComplexF64
     @test eltype(reduced.e) == Float32

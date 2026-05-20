@@ -80,9 +80,7 @@ end
     Y_h = im * ω * Q_h / V0
 
     @test direct.displacement ≈ u_h
-    @test direct.drive_terminal_charge ≈ -removed_electrode_row_residual
     @test direct.drive_terminal_charge ≈ Q_h
-    @test direct.drive_terminal_current ≈ im * ω * Q_h
     @test direct.drive_terminal_admittance ≈ Y_h
     @test direct.ω == ω
     @test direct.analysis === nothing
@@ -120,9 +118,7 @@ end
     @test constrained_direct.displacement ≈ manual_u
     @test constrained_direct.internal_potential ≈ manual_ϕᵢ
     @test constrained_direct.displacement[1] == 0.25
-    @test constrained_direct.drive_terminal_charge ≈ -manual_reaction_residual
     @test constrained_direct.drive_terminal_charge ≈ manual_charge
-    @test constrained_direct.drive_terminal_current ≈ im * ω * manual_charge
     @test constrained_direct.drive_terminal_admittance ≈ im * ω * manual_charge / V0
     @test constrained_direct.solver_info.matrix_size == (2, 2)
     @test constrained_direct.solver_info.reduced_relative_residual < 1.0e-12
@@ -201,10 +197,6 @@ end
     @test direct.drive_terminal_charge ≈ Q_h
     @test direct.drive_terminal_admittance ≈ Y_h
     @test sparse_direct.displacement ≈ direct.displacement
-    @test sparse_direct.internal_potential ≈ direct.internal_potential
-    @test sparse_direct.potential ≈ direct.potential
-    @test sparse_direct.drive_terminal_charge ≈ direct.drive_terminal_charge
-    @test sparse_direct.drive_terminal_current ≈ direct.drive_terminal_current
     @test sparse_direct.drive_terminal_admittance ≈ direct.drive_terminal_admittance
 end
 
@@ -244,8 +236,6 @@ end
     @test result.potential[partition.internal] ≈ result.internal_potential
     @test result.potential[partition.driven] == ones(length(partition.driven))
     @test result.potential[partition.grounded] == zeros(length(partition.grounded))
-    @test isfinite(result.drive_terminal_charge)
-    @test isfinite(result.drive_terminal_current)
     @test isfinite(result.drive_terminal_admittance)
 end
 

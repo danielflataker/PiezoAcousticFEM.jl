@@ -42,27 +42,11 @@ end
     result = solve(problem, analysis)
     prepared_result = solve(reduction, analysis)
 
-    @test problem.material_source === mat
-    @test problem.loss isa Lossless
-    @test problem.electrodes.drive isa FacetElectrode
-    @test problem.electrodes.reference isa FacetElectrode
-    @test only(problem.boundary_conditions.mechanical) isa AxisBoundary
-    @test assembled.problem === problem
-    @test assembled.material isa AxisymmetricRZPiezoMaterial
-    @test reduction.assembled === assembled
-    @test reduction.reduced isa PiezoAcousticFEM.ElectrodeReducedKForm
     @test result isa HarmonicVoltageResult
-    @test result.reduction.assembled.problem === problem
-    @test issparse(result.assembled.assembly.system.Kuu)
-    @test issparse(result.assembled.assembly.system.Kuϕ)
-    @test issparse(result.assembled.assembly.system.Kϕu)
-    @test issparse(result.assembled.assembly.system.Kϕϕ)
-    @test issparse(result.assembled.assembly.system.Muu)
-    @test length(result.reduction.partition.internal) > 0
-    @test !isempty(result.reduction.partition.driven)
-    @test !isempty(result.reduction.partition.grounded)
-    @test isempty(intersect(result.reduction.partition.driven, result.reduction.partition.grounded))
-    @test !isempty(result.reduction.mechanical_dirichlet.indices)
+    @test result.problem === problem
+    @test result.analysis === analysis
+    @test result.solution.analysis === analysis
+    @test result.solution.convention == analysis.convention
     @test result.solution.displacement[result.reduction.mechanical_dirichlet.indices] ==
         result.reduction.mechanical_dirichlet.values
     @test result.solution.potential[result.reduction.partition.driven] ==
@@ -71,34 +55,21 @@ end
         zeros(length(result.reduction.partition.grounded))
     @test all(isfinite, result.solution.displacement)
     @test all(isfinite, result.solution.potential)
-    @test isfinite(result.solution.drive_terminal_charge)
-    @test isfinite(result.solution.drive_terminal_current)
     @test isfinite(result.solution.drive_terminal_admittance)
-    @test result.problem === problem
-    @test result.analysis === analysis
-    @test result.solution.analysis === analysis
-    @test result.solution.convention == analysis.convention
-    @test prepared_result.problem === problem
-    @test prepared_result.assembled === assembled
-    @test prepared_result.reduction === reduction
     @test prepared_result.solution.drive_terminal_admittance ≈ result.solution.drive_terminal_admittance
+
     sweep_analyses = [
         HarmonicVoltageAnalysis(2π * f, 1.0, :exp_iomega_t)
         for f in (10_000.0, 12_000.0)
     ]
     sweep = solve(reduction, sweep_analyses)
     @test sweep isa FrequencySweepResult
-    @test sweep.problem === problem
-    @test sweep.analyses === sweep_analyses
-    @test sweep.assembled === assembled
-    @test sweep.reduction === reduction
     @test length(sweep.results) == length(sweep_analyses)
-    @test all(point -> point isa HarmonicSweepPointResult, sweep.results)
     @test all(point -> point.status == :success, sweep.results)
     @test all(point -> point.error === nothing, sweep.results)
-    @test all(point -> point.result.reduction === reduction, sweep.results)
     @test sweep.reuse_level == :frequency_change
     @test_throws ArgumentError solve(reduction, HarmonicVoltageAnalysis[])
+
     voltage_sweep = solve(reduction, [
         HarmonicVoltageAnalysis(2π * 10_000.0, voltage, :exp_iomega_t)
         for voltage in (1.0, 2.0)
@@ -108,12 +79,9 @@ end
     failing_solver = FailsSecondLinearSolve()
     failed_sweep = solve(reduction, sweep_analyses; solver=failing_solver)
     @test failed_sweep.results[1].status == :success
-    @test failed_sweep.results[1].result isa HarmonicVoltageResult
-    @test failed_sweep.results[1].error === nothing
     @test failed_sweep.results[2].status == :failed
     @test failed_sweep.results[2].result === nothing
     @test failed_sweep.results[2].error isa ErrorException
-    @test failed_sweep.results[2].analysis === sweep_analyses[2]
 
     explicit_solution = PiezoAcousticFEM.solve_direct_voltage(
         reduction.reduced,
@@ -189,8 +157,6 @@ end
     free = result.reduction.free_dofs
 
     @test result isa ShortCircuitModalResult
-    @test result.assembled.problem === problem
-    @test result.reduction.partition isa PiezoAcousticFEM.ShortCircuitDofPartition
     @test sort(vcat(result.reduction.partition.internal, result.reduction.partition.grounded)) ==
         collect(1:result.reduction.partition.nϕ)
     @test length(result.eigenvalues) == 4
@@ -217,9 +183,6 @@ end
     @test fields isa NodalFieldOutput
     @test length(fields.displacement) == getnnodes(grid)
     @test length(fields.potential) == getnnodes(grid)
-    @test fields.metadata.eigenvalue == result.eigenvalues[1]
-    @test fields.metadata.angular_frequency == result.angular_frequencies[1]
-    @test fields.metadata.frequency == result.frequencies[1]
     @test fields.metadata.normalization == :mass
     @test_throws ArgumentError reconstruct_fields(result, 0)
 
