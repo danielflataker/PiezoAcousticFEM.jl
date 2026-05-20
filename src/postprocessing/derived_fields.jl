@@ -1,0 +1,232 @@
+"""
+    ElementDerivedFieldOutput(...)
+
+Derived physical fields evaluated inside one finite element at explicitly
+provided reference coordinates. These values are local postprocessing samples,
+not nodal fields and not projected VTK fields.
+"""
+struct ElementDerivedFieldOutput{R,X,U,P,GU,GP,S,E,T,D,M}
+    cellid::Int
+    reference_points::R
+    coordinates::X
+    displacement::U
+    potential::P
+    displacement_gradient::GU
+    potential_gradient::GP
+    strain::S
+    electric_field::E
+    stress::T
+    electric_displacement::D
+    metadata::M
+end
+
+"""
+    evaluate_derived_fields(assembled, fields, cellid, reference_points)
+    evaluate_derived_fields(result, cellid, reference_points)
+
+Evaluate axisymmetric derived fields inside one element at local reference
+coordinates. The returned quantities include interpolated primary values,
+gradients, strain, electric field, stress, and electric displacement.
+"""
+function evaluate_derived_fields(
+    assembled::AssembledPiezoProblem,
+    fields::CompactFieldDofs,
+    cellid::Integer,
+    reference_points,
+)
+    return evaluate_derived_fields(
+        assembled.assembly,
+        assembled.material,
+        assembled.problem.formulation,
+        assembled.problem.interpolation,
+        fields,
+        cellid,
+        reference_points;
+        metadata=merge_derived_field_metadata(fields.metadata),
+    )
+end
+
+
+function evaluate_derived_fields(result::HarmonicVoltageResult, cellid::Integer, reference_points)
+    fields = reconstruct_field_dofs(result)
+
+    return evaluate_derived_fields(
+        result.assembled.assembly,
+        result.assembled.material,
+        result.problem.formulation,
+        result.problem.interpolation,
+        fields,
+        cellid,
+        reference_points;
+        metadata=merge_derived_field_metadata(
+            merge(
+                fields.metadata,
+                (
+                    analysis=:harmonic_voltage,
+                    harmonic_convention=result.analysis.convention,
+                    quantity_interpretation="complex amplitude",
+                ),
+            ),
+        ),
+    )
+end
+
+
+function evaluate_derived_fields(
+    assembly::KFormAssembly,
+    material::AxisymmetricRZPiezoMaterial,
+    formulation::AxisymmetricRZ,
+    interpolation,
+    fields::CompactFieldDofs,
+    cellid::Integer,
+    reference_points;
+    metadata=merge_derived_field_metadata(fields.metadata),
+)
+    grid = ferrite_grid(assembly)
+    1 <= cellid <= getncells(grid) ||
+        throw(ArgumentError("cellid must be in 1:$(getncells(grid)), got $cellid"))
+
+    points = collect(reference_points)
+    cell = CellCache(assembly.dofhandler)
+    reinit!(cell, Int(cellid))
+    coordinates = getcoordinates(cell)
+    cell_dofs = celldofs(cell)
+    u_range = piezo_field_dof_range(assembly.dofhandler, :u)
+    ϕ_range = piezo_field_dof_range(assembly.dofhandler, :ϕ)
+
+    u_local = fields.displacement[[
+        compact_displacement_dof(assembly.dofmap, dof) for dof in cell_dofs[u_range]
+    ]]
+    ϕ_local = fields.potential[[
+        compact_potential_dof(assembly.dofmap, dof) for dof in cell_dofs[ϕ_range]
+    ]]
+
+    pointvalues_u = PointValues(interpolation)
+    pointvalues_ϕ = PointValues(interpolation)
+
+    samples = [
+        evaluate_derived_field_point(
+            pointvalues_u,
+            pointvalues_ϕ,
+            coordinates,
+            u_local,
+            ϕ_local,
+            material,
+            formulation,
+            ξ,
+        )
+        for ξ in points
+    ]
+
+    return ElementDerivedFieldOutput(
+        Int(cellid),
+        points,
+        [sample.coordinate for sample in samples],
+        [sample.displacement for sample in samples],
+        [sample.potential for sample in samples],
+        [sample.displacement_gradient for sample in samples],
+        [sample.potential_gradient for sample in samples],
+        [sample.strain for sample in samples],
+        [sample.electric_field for sample in samples],
+        [sample.stress for sample in samples],
+        [sample.electric_displacement for sample in samples],
+        metadata,
+    )
+end
+
+
+function evaluate_derived_field_point(
+    pointvalues_u,
+    pointvalues_ϕ,
+    coordinates,
+    u_local,
+    ϕ_local,
+    material,
+    formulation,
+    ξ,
+)
+    reinit!(pointvalues_u, coordinates, ξ)
+    reinit!(pointvalues_ϕ, coordinates, ξ)
+
+    x = point_coordinate(pointvalues_u, coordinates)
+    Nu = Nu_matrix(pointvalues_u, 1)
+    Bϕ = Bϕ_matrix(formulation, pointvalues_ϕ, 1)
+
+    u_values = Nu * u_local
+    u = Vec{2}((u_values[1], u_values[2]))
+    ∇u = displacement_gradient_from_pointvalues(pointvalues_u, u_local)
+    ∇ϕ_values = Bϕ * ϕ_local
+    ∇ϕ = Vec{2}((∇ϕ_values[1], ∇ϕ_values[2]))
+    S = strain(formulation, u, ∇u, x)
+    E = electric_field(formulation, ∇ϕ)
+
+    return (
+        coordinate=x,
+        displacement=u,
+        potential=dot_shape_values(pointvalues_ϕ, ϕ_local),
+        displacement_gradient=∇u,
+        potential_gradient=∇ϕ,
+        strain=S,
+        electric_field=E,
+        stress=stress(material, S, E),
+        electric_displacement=electric_displacement(material, S, E),
+    )
+end
+
+
+function merge_derived_field_metadata(metadata)
+    return merge(
+        metadata,
+        (
+            output_kind=:element_derived_fields,
+            evaluation=:reference_points,
+            coordinate_units="m",
+            potential_units="V",
+            strain_units="1",
+            electric_field_units="V/m",
+            stress_units="Pa",
+            electric_displacement_units="C/m^2",
+        ),
+    )
+end
+
+
+function dot_shape_values(pointvalues, local_values)
+    value = zero(eltype(local_values))
+    for a in 1:getnbasefunctions(pointvalues)
+        value += shape_value(pointvalues, 1, a) * local_values[a]
+    end
+
+    return value
+end
+
+
+function point_coordinate(pointvalues, coordinates)
+    x = zero(first(coordinates))
+    for a in 1:getnbasefunctions(pointvalues)
+        x += shape_value(pointvalues, 1, a) * coordinates[a]
+    end
+
+    return x
+end
+
+
+function displacement_gradient_from_pointvalues(pointvalues, u_local)
+    T = eltype(u_local)
+    ∇u = zero_displacement_gradient(T)
+
+    for a in 1:getnbasefunctions(pointvalues)
+        ∇N = shape_gradient(pointvalues, 1, a)
+        uᵣ = u_local[2a-1]
+        uz = u_local[2a]
+        ∇u += @SMatrix [
+            uᵣ * ∇N[1] uᵣ * ∇N[2]
+            uz * ∇N[1] uz * ∇N[2]
+        ]
+    end
+
+    return ∇u
+end
+
+
+zero_displacement_gradient(::Type{T}) where {T} = @SMatrix zeros(T, 2, 2)

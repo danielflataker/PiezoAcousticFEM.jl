@@ -34,6 +34,7 @@ include("analysis/modal.jl")
 include("analysis/validation.jl")
 
 include("postprocessing/reconstruction.jl")
+include("postprocessing/derived_fields.jl")
 include("postprocessing/observables.jl")
 include("postprocessing/vtk_output.jl")
 
@@ -50,7 +51,7 @@ export solve, assemble, prepare_analysis, validate
 export HarmonicVoltageResult, HarmonicSweepPointResult, FrequencySweepResult, ShortCircuitModalResult
 export AbstractObservable, AdmittanceObservable, ChargeObservable, CurrentObservable
 export ModalFrequenciesObservable, evaluate
-export CompactFieldDofs, NodalFieldOutput
-export reconstruct_field_dofs, reconstruct_fields, write_vtk
+export CompactFieldDofs, NodalFieldOutput, ElementDerivedFieldOutput
+export reconstruct_field_dofs, reconstruct_fields, evaluate_derived_fields, write_vtk
 
 end
