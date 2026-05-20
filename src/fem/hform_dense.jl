@@ -27,7 +27,7 @@ Eq. (3.190)-(3.192):
 
 - grounded potential DOFs are Dirichlet DOFs and are not used in the reduction,
 - internal potential DOFs are condensed out with a Schur complement,
-- all nodes on the driven electrode are tied to one scalar potential via
+- all nodes on the drive electrode are tied to one scalar potential via
   `Ip = [1, 1, ..., 1]ᵀ`.
 
 The implementation uses linear solves (`Kii \\ ...`) instead of an explicit

@@ -22,7 +22,7 @@
     serendipity_fields = reconstruct_field_dofs(serendipity_result)
     @test length(serendipity_fields.displacement) == 16
     @test length(serendipity_fields.potential) == 8
-    @test isfinite(serendipity_result.solution.admittance)
+    @test isfinite(serendipity_result.solution.drive_terminal_admittance)
 
     serendipity_modal = solve(serendipity_problem, ShortCircuitModalAnalysis(2))
     serendipity_mode_fields = reconstruct_field_dofs(serendipity_modal, 1)

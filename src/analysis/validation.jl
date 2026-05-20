@@ -18,10 +18,10 @@ function validate_boundary_semantics(problem::PiezoProblem)
     interpolation = problem.interpolation
     tol = ferrite_geometry_tolerance(grid)
 
-    signal = _validate_electrode(grid, interpolation, problem.electrodes.signal, "signal electrode", tol)
+    drive = _validate_electrode(grid, interpolation, problem.electrodes.drive, "drive electrode", tol)
     reference = _validate_electrode(grid, interpolation, problem.electrodes.reference, "reference electrode", tol)
-    isempty(intersect(signal, reference)) ||
-        throw(ArgumentError("signal and reference electrodes must use disjoint facets"))
+    isempty(intersect(drive, reference)) ||
+        throw(ArgumentError("drive and reference electrodes must use disjoint facets"))
 
     for (i, boundary) in pairs(problem.boundary_conditions.mechanical)
         _validate_mechanical_boundary(grid, interpolation, boundary, "mechanical boundary $i", tol)

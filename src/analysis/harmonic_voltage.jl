@@ -191,7 +191,7 @@ function prepare_analysis(
     problem = assembled.problem
     partition = potential_partition(
         assembled.assembly;
-        driven=problem.electrodes.signal,
+        driven=problem.electrodes.drive,
         grounded=problem.electrodes.reference,
     )
     reduced = electrode_reduced_k_form(assembled.assembly.system, partition)

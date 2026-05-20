@@ -39,8 +39,9 @@ end
     DirectVoltageSolution
 
 Result from a direct voltage solve on an `ElectrodeReducedKForm`.
-`charge` is the total charge on the driven electrode and `admittance` is
-`im * ω * charge / voltage`.
+`drive_terminal_charge` is the total charge on the drive terminal,
+`drive_terminal_current` is `im * ω * drive_terminal_charge`, and
+`drive_terminal_admittance` is `drive_terminal_current / voltage`.
 """
 struct DirectVoltageSolution{
     U<:AbstractVector,
@@ -60,9 +61,9 @@ struct DirectVoltageSolution{
     internal_potential::PI
     potential::P
     voltage::V
-    charge::Q
-    current::I
-    admittance::Y
+    drive_terminal_charge::Q
+    drive_terminal_current::I
+    drive_terminal_admittance::Y
     ω::W
     analysis::A
     convention::C
@@ -74,7 +75,7 @@ end
 """
     solve_direct_voltage(reduced, ω, voltage; mechanical_dirichlet=nothing)
 
-Solve the electrode-collapsed K-form with prescribed driven-electrode voltage.
+Solve the electrode-collapsed K-form with prescribed drive-terminal voltage.
 The free unknowns are mechanical displacement DOFs and internal electrical
 potential DOFs. `mechanical_dirichlet` may be a `DirichletDofs` object whose
 indices refer to the compact displacement vector.
@@ -105,9 +106,9 @@ function solve_direct_voltage(
         ϕᵢ,
         observables.potential,
         voltage,
-        observables.charge,
-        observables.current,
-        observables.admittance,
+        observables.drive_terminal_charge,
+        observables.drive_terminal_current,
+        observables.drive_terminal_admittance,
         ω,
         analysis,
         convention,
@@ -177,13 +178,18 @@ end
 
 function direct_voltage_observables(reduced::ElectrodeReducedKForm, u, ϕᵢ, voltage, ω)
     ϕ = reconstruct_potential(reduced, ϕᵢ, voltage)
-    # Evaluate the removed driven-electrode row as a reaction equation. With
+    # Evaluate the removed drive-terminal row as a reaction equation. With
     # the Kocbach/KLV sign convention this reaction is minus the terminal charge.
-    charge = -(sum(reduced.KPu .* u) + sum(reduced.KPi .* ϕᵢ) + reduced.KPP * voltage)
-    current = im * ω * charge
-    admittance = current / voltage
+    drive_terminal_charge = -(sum(reduced.KPu .* u) + sum(reduced.KPi .* ϕᵢ) + reduced.KPP * voltage)
+    drive_terminal_current = im * ω * drive_terminal_charge
+    drive_terminal_admittance = drive_terminal_current / voltage
 
-    return (potential=ϕ, charge=charge, current=current, admittance=admittance)
+    return (
+        potential=ϕ,
+        drive_terminal_charge=drive_terminal_charge,
+        drive_terminal_current=drive_terminal_current,
+        drive_terminal_admittance=drive_terminal_admittance,
+    )
 end
 
 
@@ -199,7 +205,7 @@ end
     reconstruct_potential(reduced, internal_potential, voltage)
 
 Reconstruct the full compact electric potential vector from internal
-potentials, prescribed driven-electrode voltage, and grounded electrode values.
+potentials, prescribed drive-terminal voltage, and grounded electrode values.
 """
 function reconstruct_potential(reduced::ElectrodeReducedKForm, internal_potential, voltage)
     partition = reduced.partition

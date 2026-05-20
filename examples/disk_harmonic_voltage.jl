@@ -4,7 +4,7 @@ using PiezoAcousticFEM
 """
 Small axisymmetric PZT-5A disk harmonic-voltage example.
 
-The script solves a voltage-driven vacuum disk model, evaluates the driven
+The script solves a voltage-driven vacuum disk model, evaluates the drive
 terminal admittance, and writes nodal displacement/potential fields to VTK.
 """
 

@@ -8,7 +8,7 @@ abstract type AbstractObservable end
 """
     AdmittanceObservable()
 
-Extract the driven-terminal admittance from a harmonic voltage result, in
+Extract the drive-terminal admittance from a harmonic voltage result, in
 siemens. The value follows the result's harmonic time convention.
 """
 struct AdmittanceObservable <: AbstractObservable end
@@ -16,7 +16,7 @@ struct AdmittanceObservable <: AbstractObservable end
 """
     ChargeObservable()
 
-Extract the driven-terminal total charge from a harmonic voltage result, in
+Extract the drive-terminal total charge from a harmonic voltage result, in
 coulombs. The axisymmetric integration factor is already included.
 """
 struct ChargeObservable <: AbstractObservable end
@@ -24,7 +24,7 @@ struct ChargeObservable <: AbstractObservable end
 """
     CurrentObservable()
 
-Extract the driven-terminal current from a harmonic voltage result, in amperes.
+Extract the drive-terminal current from a harmonic voltage result, in amperes.
 The value follows the result's harmonic time convention.
 """
 struct CurrentObservable <: AbstractObservable end
@@ -43,7 +43,7 @@ Evaluate an observable against an analysis result.
 """
 function evaluate end
 
-evaluate(::AdmittanceObservable, result::HarmonicVoltageResult) = result.solution.admittance
-evaluate(::ChargeObservable, result::HarmonicVoltageResult) = result.solution.charge
-evaluate(::CurrentObservable, result::HarmonicVoltageResult) = result.solution.current
+evaluate(::AdmittanceObservable, result::HarmonicVoltageResult) = result.solution.drive_terminal_admittance
+evaluate(::ChargeObservable, result::HarmonicVoltageResult) = result.solution.drive_terminal_charge
+evaluate(::CurrentObservable, result::HarmonicVoltageResult) = result.solution.drive_terminal_current
 evaluate(::ModalFrequenciesObservable, result::ShortCircuitModalResult) = result.frequencies

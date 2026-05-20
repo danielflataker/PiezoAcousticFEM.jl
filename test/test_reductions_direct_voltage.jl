@@ -80,10 +80,10 @@ end
     Y_h = im * ω * Q_h / V0
 
     @test direct.displacement ≈ u_h
-    @test direct.charge ≈ -removed_electrode_row_residual
-    @test direct.charge ≈ Q_h
-    @test direct.current ≈ im * ω * Q_h
-    @test direct.admittance ≈ Y_h
+    @test direct.drive_terminal_charge ≈ -removed_electrode_row_residual
+    @test direct.drive_terminal_charge ≈ Q_h
+    @test direct.drive_terminal_current ≈ im * ω * Q_h
+    @test direct.drive_terminal_admittance ≈ Y_h
     @test direct.ω == ω
     @test direct.analysis === nothing
     @test direct.convention == :exp_iomega_t
@@ -91,12 +91,12 @@ end
     @test direct.solver_info.matrix_size == (3, 3)
     @test direct.solver_info.reduced_relative_residual < 1.0e-12
     @test factorized_direct.displacement ≈ direct.displacement
-    @test factorized_direct.admittance ≈ direct.admittance
+    @test factorized_direct.drive_terminal_admittance ≈ direct.drive_terminal_admittance
     @test factorized_direct.solver_info.method == :factorized_direct
     @test direct.potential[partition.internal] ≈ direct.internal_potential
     @test direct.potential[partition.driven] == fill(V0, length(partition.driven))
     @test direct.potential[partition.grounded] == zeros(length(partition.grounded))
-    @test PiezoAcousticFEM.solve_direct_voltage(reduced, ω, V0).admittance ≈ Y_h
+    @test PiezoAcousticFEM.solve_direct_voltage(reduced, ω, V0).drive_terminal_admittance ≈ Y_h
 
     mechanical_dirichlet = PiezoAcousticFEM.DirichletDofs([1], [0.25])
     constrained_direct =
@@ -120,14 +120,14 @@ end
     @test constrained_direct.displacement ≈ manual_u
     @test constrained_direct.internal_potential ≈ manual_ϕᵢ
     @test constrained_direct.displacement[1] == 0.25
-    @test constrained_direct.charge ≈ -manual_reaction_residual
-    @test constrained_direct.charge ≈ manual_charge
-    @test constrained_direct.current ≈ im * ω * manual_charge
-    @test constrained_direct.admittance ≈ im * ω * manual_charge / V0
+    @test constrained_direct.drive_terminal_charge ≈ -manual_reaction_residual
+    @test constrained_direct.drive_terminal_charge ≈ manual_charge
+    @test constrained_direct.drive_terminal_current ≈ im * ω * manual_charge
+    @test constrained_direct.drive_terminal_admittance ≈ im * ω * manual_charge / V0
     @test constrained_direct.solver_info.matrix_size == (2, 2)
     @test constrained_direct.solver_info.reduced_relative_residual < 1.0e-12
-    @test PiezoAcousticFEM.solve_direct_voltage(reduced, ω, V0; mechanical_dirichlet).admittance ≈
-        constrained_direct.admittance
+    @test PiezoAcousticFEM.solve_direct_voltage(reduced, ω, V0; mechanical_dirichlet).drive_terminal_admittance ≈
+        constrained_direct.drive_terminal_admittance
     @test_throws ArgumentError PiezoAcousticFEM.solve_direct_voltage(
         reduced,
         ω,
@@ -153,9 +153,9 @@ end
     removed_electrode_row_residual = reduced.KPP * V0
 
     @test removed_electrode_row_residual ≈ -C * V0
-    @test solution.charge ≈ C * V0
-    @test solution.current ≈ im * ω * C * V0
-    @test solution.admittance ≈ im * ω * C
+    @test solution.drive_terminal_charge ≈ C * V0
+    @test solution.drive_terminal_current ≈ im * ω * C * V0
+    @test solution.drive_terminal_admittance ≈ im * ω * C
 end
 
 @testset "FE direct admittance agrees with dense H-form" begin
@@ -198,14 +198,14 @@ end
     @test length(direct.internal_potential) == 2
     @test issparse(sparse_A)
     @test direct.displacement ≈ u_h
-    @test direct.charge ≈ Q_h
-    @test direct.admittance ≈ Y_h
+    @test direct.drive_terminal_charge ≈ Q_h
+    @test direct.drive_terminal_admittance ≈ Y_h
     @test sparse_direct.displacement ≈ direct.displacement
     @test sparse_direct.internal_potential ≈ direct.internal_potential
     @test sparse_direct.potential ≈ direct.potential
-    @test sparse_direct.charge ≈ direct.charge
-    @test sparse_direct.current ≈ direct.current
-    @test sparse_direct.admittance ≈ direct.admittance
+    @test sparse_direct.drive_terminal_charge ≈ direct.drive_terminal_charge
+    @test sparse_direct.drive_terminal_current ≈ direct.drive_terminal_current
+    @test sparse_direct.drive_terminal_admittance ≈ direct.drive_terminal_admittance
 end
 
 @testset "FE direct solve with axis displacement constraint" begin
@@ -244,9 +244,9 @@ end
     @test result.potential[partition.internal] ≈ result.internal_potential
     @test result.potential[partition.driven] == ones(length(partition.driven))
     @test result.potential[partition.grounded] == zeros(length(partition.grounded))
-    @test isfinite(result.charge)
-    @test isfinite(result.current)
-    @test isfinite(result.admittance)
+    @test isfinite(result.drive_terminal_charge)
+    @test isfinite(result.drive_terminal_current)
+    @test isfinite(result.drive_terminal_admittance)
 end
 
 @testset "harmonic solve accepts solver config" begin
@@ -274,7 +274,7 @@ end
 
     factorized = solve(problem, analysis; solver=FactorizedDirectSolver())
 
-    @test isfinite(factorized.solution.admittance)
+    @test isfinite(factorized.solution.drive_terminal_admittance)
     @test factorized.solution.solver_info.method == :factorized_direct
 end
 

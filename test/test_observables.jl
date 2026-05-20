@@ -21,9 +21,9 @@
     )
     result = solve(problem, HarmonicVoltageAnalysis(2π * 10_000.0, 1.0, :exp_iomega_t))
 
-    @test evaluate(AdmittanceObservable(), result) == result.solution.admittance
-    @test evaluate(ChargeObservable(), result) == result.solution.charge
-    @test evaluate(CurrentObservable(), result) == result.solution.current
+    @test evaluate(AdmittanceObservable(), result) == result.solution.drive_terminal_admittance
+    @test evaluate(ChargeObservable(), result) == result.solution.drive_terminal_charge
+    @test evaluate(CurrentObservable(), result) == result.solution.drive_terminal_current
 end
 
 @testset "observables extract modal quantities" begin

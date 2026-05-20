@@ -12,12 +12,12 @@ end
 
 
 """
-    TwoTerminalElectrodes(signal, reference)
+    TwoTerminalElectrodes(drive, reference)
 
-Two-terminal electrode setup. The analysis decides whether `signal` is driven,
-short-circuited, floating, etc.; `reference` is the reference electrode.
+Two-terminal electrode setup. The analysis decides how the `drive` terminal is
+excited or constrained; `reference` is the reference electrode.
 """
 struct TwoTerminalElectrodes{D<:AbstractElectrode,G<:AbstractElectrode}
-    signal::D
+    drive::D
     reference::G
 end

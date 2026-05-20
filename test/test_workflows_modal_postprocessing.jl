@@ -44,7 +44,7 @@ end
 
     @test problem.material_source === mat
     @test problem.loss isa Lossless
-    @test problem.electrodes.signal isa FacetElectrode
+    @test problem.electrodes.drive isa FacetElectrode
     @test problem.electrodes.reference isa FacetElectrode
     @test only(problem.boundary_conditions.mechanical) isa AxisBoundary
     @test assembled.problem === problem
@@ -71,9 +71,9 @@ end
         zeros(length(result.reduction.partition.grounded))
     @test all(isfinite, result.solution.displacement)
     @test all(isfinite, result.solution.potential)
-    @test isfinite(result.solution.charge)
-    @test isfinite(result.solution.current)
-    @test isfinite(result.solution.admittance)
+    @test isfinite(result.solution.drive_terminal_charge)
+    @test isfinite(result.solution.drive_terminal_current)
+    @test isfinite(result.solution.drive_terminal_admittance)
     @test result.problem === problem
     @test result.analysis === analysis
     @test result.solution.analysis === analysis
@@ -81,7 +81,7 @@ end
     @test prepared_result.problem === problem
     @test prepared_result.assembled === assembled
     @test prepared_result.reduction === reduction
-    @test prepared_result.solution.admittance ≈ result.solution.admittance
+    @test prepared_result.solution.drive_terminal_admittance ≈ result.solution.drive_terminal_admittance
     sweep_analyses = [
         HarmonicVoltageAnalysis(2π * f, 1.0, :exp_iomega_t)
         for f in (10_000.0, 12_000.0)
@@ -123,7 +123,7 @@ end
         analysis,
         convention=analysis.convention,
     )
-    @test result.solution.admittance ≈ explicit_solution.admittance
+    @test result.solution.drive_terminal_admittance ≈ explicit_solution.drive_terminal_admittance
 end
 
 @testset "direct voltage supports complex material loss" begin
@@ -156,8 +156,8 @@ end
     @test eltype(result.assembled.assembly.system.Kuu) <: Complex
     @test eltype(result.solution.displacement) <: Complex
     @test eltype(result.solution.potential) <: Complex
-    @test isfinite(real(result.solution.admittance))
-    @test isfinite(imag(result.solution.admittance))
+    @test isfinite(real(result.solution.drive_terminal_admittance))
+    @test isfinite(imag(result.solution.drive_terminal_admittance))
 end
 
 @testset "short-circuit modal dense reference" begin

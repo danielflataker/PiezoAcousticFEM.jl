@@ -52,7 +52,7 @@ Build Kocbach's potential partition from explicit electrode objects.
 """
 function potential_partition(assembly::KFormAssembly; driven::FacetElectrode, grounded::FacetElectrode)
     grid = ferrite_grid(assembly)
-    driven_facets = resolve_facetset(grid, driven; label="driven electrode facet set")
+    driven_facets = resolve_facetset(grid, driven; label="drive electrode facet set")
     grounded_facets = resolve_facetset(grid, grounded; label="grounded electrode facet set")
 
     p = potential_dofs_on_facets(assembly, driven_facets)
@@ -72,12 +72,12 @@ homogeneous electric Dirichlet sets.
 """
 function short_circuit_partition(assembly::KFormAssembly, electrodes::TwoTerminalElectrodes)
     grid = ferrite_grid(assembly)
-    signal_facets = resolve_facetset(grid, electrodes.signal; label="signal electrode facet set")
+    drive_facets = resolve_facetset(grid, electrodes.drive; label="drive electrode facet set")
     reference_facets = resolve_facetset(grid, electrodes.reference; label="reference electrode facet set")
 
-    signal = potential_dofs_on_facets(assembly, signal_facets)
+    drive = potential_dofs_on_facets(assembly, drive_facets)
     reference = potential_dofs_on_facets(assembly, reference_facets)
-    grounded = sort!(unique!(vcat(signal, reference)))
+    grounded = sort!(unique!(vcat(drive, reference)))
     nϕ = length(assembly.dofmap.ϕ_dofs)
     internal = setdiff(collect(1:nϕ), grounded)
 
