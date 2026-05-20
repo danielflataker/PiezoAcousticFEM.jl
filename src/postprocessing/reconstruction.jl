@@ -1,14 +1,41 @@
 """
+    CompactFieldDofs(displacement, potential; metadata)
+
+Field values in this package's compact displacement and potential indexing,
+not grid-node indexing.
+"""
+struct CompactFieldDofs{D,P,M}
+    displacement::D
+    potential::P
+    metadata::M
+end
+
+CompactFieldDofs(displacement, potential; metadata=(output_kind=:compact_field_dofs,)) =
+    CompactFieldDofs(displacement, potential, metadata)
+
+"""
+    NodalFieldOutput(displacement, potential, radius; metadata)
+
+Nodal fields reconstructed on the grid vertices for visualization and simple
+postprocessing.
+"""
+struct NodalFieldOutput{D,P,R,M}
+    displacement::D
+    potential::P
+    radius::R
+    metadata::M
+end
+
+NodalFieldOutput(displacement, potential, radius; metadata=(output_kind=:nodal_fields,)) =
+    NodalFieldOutput(displacement, potential, radius, metadata)
+
+"""
     reconstruct_field_dofs(assembly, solution)
 
-Return compact field-DOF values from a K-form solution. These vectors use this
-package's compact displacement and potential indexing, not grid-node indexing.
+Return compact field-DOF values from a K-form solution.
 """
 function reconstruct_field_dofs(::KFormAssembly, solution::DirectVoltageSolution)
-    return (
-        displacement=solution.displacement,
-        potential=solution.potential,
-    )
+    return CompactFieldDofs(solution.displacement, solution.potential)
 end
 
 
@@ -22,9 +49,15 @@ function reconstruct_field_dofs(result::ShortCircuitModalResult, mode_index::Int
 
     mode = result.modes[:, mode_index]
 
-    return (
-        displacement=mode,
-        potential=reconstruct_short_circuit_modal_potential(result, mode),
+    return CompactFieldDofs(
+        mode,
+        reconstruct_short_circuit_modal_potential(result, mode);
+        metadata=(
+            output_kind=:compact_field_dofs,
+            analysis=:short_circuit_modal,
+            mode_index=mode_index,
+            normalization=result.normalization,
+        ),
     )
 end
 
@@ -35,19 +68,29 @@ end
 Reconstruct grid-vertex fields from compact K-form solution vectors. This is a
 simple visualization path; compact field DOFs remain the solver truth.
 """
-function reconstruct_fields(assembly::KFormAssembly, solution::DirectVoltageSolution)
+function reconstruct_fields(assembly::KFormAssembly, solution::DirectVoltageSolution; metadata=(output_kind=:nodal_fields,))
     grid = ferrite_grid(assembly)
 
-    return (
-        displacement=nodal_displacement(assembly, solution.displacement),
-        potential=nodal_potential(assembly, solution.potential),
-        radius=[Ferrite.get_node_coordinate(grid, nodeid)[1] for nodeid in 1:getnnodes(grid)],
+    return NodalFieldOutput(
+        nodal_displacement(assembly, solution.displacement),
+        nodal_potential(assembly, solution.potential),
+        [Ferrite.get_node_coordinate(grid, nodeid)[1] for nodeid in 1:getnnodes(grid)];
+        metadata,
     )
 end
 
 
 reconstruct_fields(result::HarmonicVoltageResult) =
-    reconstruct_fields(result.assembled.assembly, result.solution)
+    reconstruct_fields(
+        result.assembled.assembly,
+        result.solution;
+        metadata=(
+            output_kind=:nodal_fields,
+            analysis=:harmonic_voltage,
+            harmonic_convention=result.analysis.convention,
+            quantity_interpretation="complex amplitude",
+        ),
+    )
 
 
 """
@@ -66,14 +109,20 @@ function reconstruct_fields(result::ShortCircuitModalResult, mode_index::Integer
     potential = reconstruct_short_circuit_modal_potential(result, mode)
     grid = ferrite_grid(assembly)
 
-    return (
-        displacement=nodal_displacement(assembly, mode),
-        potential=nodal_potential(assembly, potential),
-        radius=[Ferrite.get_node_coordinate(grid, nodeid)[1] for nodeid in 1:getnnodes(grid)],
-        eigenvalue=result.eigenvalues[mode_index],
-        angular_frequency=result.angular_frequencies[mode_index],
-        frequency=result.frequencies[mode_index],
-        normalization=result.normalization,
+    return NodalFieldOutput(
+        nodal_displacement(assembly, mode),
+        nodal_potential(assembly, potential),
+        [Ferrite.get_node_coordinate(grid, nodeid)[1] for nodeid in 1:getnnodes(grid)];
+        metadata=(
+            output_kind=:nodal_fields,
+            analysis=:short_circuit_modal,
+            mode_index=mode_index,
+            eigenvalue=result.eigenvalues[mode_index],
+            angular_frequency=result.angular_frequencies[mode_index],
+            frequency=result.frequencies[mode_index],
+            normalization=result.normalization,
+            quantity_interpretation="mode shape",
+        ),
     )
 end
 

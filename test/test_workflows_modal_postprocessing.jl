@@ -214,12 +214,13 @@ end
     end
 
     fields = reconstruct_fields(result, 1)
+    @test fields isa NodalFieldOutput
     @test length(fields.displacement) == getnnodes(grid)
     @test length(fields.potential) == getnnodes(grid)
-    @test fields.eigenvalue == result.eigenvalues[1]
-    @test fields.angular_frequency == result.angular_frequencies[1]
-    @test fields.frequency == result.frequencies[1]
-    @test fields.normalization == :mass
+    @test fields.metadata.eigenvalue == result.eigenvalues[1]
+    @test fields.metadata.angular_frequency == result.angular_frequencies[1]
+    @test fields.metadata.frequency == result.frequencies[1]
+    @test fields.metadata.normalization == :mass
     @test_throws ArgumentError reconstruct_fields(result, 0)
 
     complex_loss_problem = PiezoProblem(
@@ -292,6 +293,9 @@ end
     run = solve(problem, HarmonicVoltageAnalysis(2π * 10_000.0, 1.0, :exp_iomega_t))
     basename = tempname()
     fields = reconstruct_fields(run)
+    @test fields isa NodalFieldOutput
+    @test fields.metadata.output_kind == :nodal_fields
+    @test fields.metadata.analysis == :harmonic_voltage
     filename = write_vtk(basename, grid, fields)
     result_basename = tempname()
     result_filename = write_vtk(result_basename, run)
@@ -335,6 +339,10 @@ end
     result = solve(problem, ShortCircuitModalAnalysis(2))
     basename = tempname()
     fields = reconstruct_fields(result, 1)
+    @test fields isa NodalFieldOutput
+    @test fields.metadata.output_kind == :nodal_fields
+    @test fields.metadata.analysis == :short_circuit_modal
+    @test fields.metadata.mode_index == 1
     filename = write_vtk(basename, grid, fields)
     result_basename = tempname()
     result_filename = write_vtk(result_basename, result; mode_index=1)

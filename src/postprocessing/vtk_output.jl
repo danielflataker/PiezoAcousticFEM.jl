@@ -25,12 +25,8 @@ VTK `.vtu` file.
 function write_vtk(filename::AbstractString, result::HarmonicVoltageResult)
     grid = result.problem.grid
     fields = reconstruct_fields(result)
-    metadata = (
-        harmonic_convention=string(result.analysis.convention),
-        quantity_interpretation="complex amplitude",
-    )
 
-    return write_vtk(filename, grid, fields; metadata)
+    return write_vtk(filename, grid, fields)
 end
 
 """
@@ -42,13 +38,8 @@ Reconstruct nodal fields for one short-circuit mode and write them to a VTK
 function write_vtk(filename::AbstractString, result::ShortCircuitModalResult; mode_index::Integer=1)
     grid = result.assembled.problem.grid
     fields = reconstruct_fields(result, mode_index)
-    metadata = (
-        modal_normalization=string(fields.normalization),
-        mode_index=string(mode_index),
-        quantity_interpretation="mode shape",
-    )
 
-    return write_vtk(filename, grid, fields; metadata)
+    return write_vtk(filename, grid, fields)
 end
 
 function vtk_metadata(fields; metadata=nothing)
@@ -62,14 +53,21 @@ function vtk_metadata(fields; metadata=nothing)
             "complex fields are exported as real, imaginary, absolute-value, and phase nodal arrays",
     )
 
-    if hasproperty(fields, :normalization)
-        entries["piezoacousticfem_modal_normalization"] = string(fields.normalization)
+    if hasproperty(fields, :metadata)
+        merge_vtk_metadata!(entries, fields.metadata)
     end
 
     metadata === nothing && return entries
 
+    merge_vtk_metadata!(entries, metadata)
+
+    return entries
+end
+
+function merge_vtk_metadata!(entries, metadata)
     for (key, value) in pairs(metadata)
-        entries["piezoacousticfem_$(key)"] = string(value)
+        vtk_key = key === :normalization ? :modal_normalization : key
+        entries["piezoacousticfem_$(vtk_key)"] = string(value)
     end
 
     return entries
