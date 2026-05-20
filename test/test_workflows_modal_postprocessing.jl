@@ -293,13 +293,18 @@ end
     basename = tempname()
     fields = reconstruct_fields(run)
     filename = write_vtk(basename, grid, fields)
+    result_basename = tempname()
+    result_filename = write_vtk(result_basename, run)
 
     @test isfile(filename)
     @test filesize(filename) > 0
+    @test isfile(result_filename)
+    @test filesize(result_filename) > 0
     @test length(fields.displacement) == getnnodes(grid)
     @test length(fields.potential) == getnnodes(grid)
     @test length(fields.radius) == getnnodes(grid)
     rm(filename; force=true)
+    rm(result_filename; force=true)
 end
 
 @testset "VTK modal output" begin
@@ -327,10 +332,14 @@ end
     basename = tempname()
     fields = reconstruct_fields(result, 1)
     filename = write_vtk(basename, grid, fields)
+    result_basename = tempname()
+    result_filename = write_vtk(result_basename, result; mode_index=1)
 
     @test isfile(filename)
+    @test isfile(result_filename)
     @test length(fields.displacement) == getnnodes(grid)
     @test length(fields.potential) == getnnodes(grid)
 
     rm(filename; force=true)
+    rm(result_filename; force=true)
 end

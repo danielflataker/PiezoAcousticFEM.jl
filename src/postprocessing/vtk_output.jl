@@ -14,6 +14,32 @@ function write_vtk(filename::AbstractString, grid, fields)
     return String(filename) * ".vtu"
 end
 
+"""
+    write_vtk(filename, result::HarmonicVoltageResult)
+
+Reconstruct nodal fields from a harmonic voltage result and write them to a
+VTK `.vtu` file.
+"""
+function write_vtk(filename::AbstractString, result::HarmonicVoltageResult)
+    grid = result.problem.grid
+    fields = reconstruct_fields(result)
+
+    return write_vtk(filename, grid, fields)
+end
+
+"""
+    write_vtk(filename, result::ShortCircuitModalResult; mode_index = 1)
+
+Reconstruct nodal fields for one short-circuit mode and write them to a VTK
+`.vtu` file.
+"""
+function write_vtk(filename::AbstractString, result::ShortCircuitModalResult; mode_index::Integer=1)
+    grid = result.assembled.problem.grid
+    fields = reconstruct_fields(result, mode_index)
+
+    return write_vtk(filename, grid, fields)
+end
+
 function write_displacement_data(vtk, displacement)
     if is_complex_vec_data(displacement)
         displacement_real = map_vec(real, displacement)

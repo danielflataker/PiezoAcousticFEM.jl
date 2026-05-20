@@ -38,7 +38,7 @@ prepare_analysis(assembled, analysis)
 
 result = solve(problem, analysis)
 admittance = evaluate(AdmittanceObservable(), result)
-vtk_file = write_vtk(output_basename, grid, reconstruct_fields(result))
+vtk_file = write_vtk(output_basename, result)
 
 if abspath(PROGRAM_FILE) == @__FILE__
     println("admittance = ", admittance)
