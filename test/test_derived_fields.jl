@@ -40,20 +40,17 @@ function linear_assembled_fixture()
 end
 
 @testset "element-local derived fields" begin
-    fixture = linear_derived_field_fixture()
+    fixture = linear_assembled_fixture()
 
     ξ = Vec{2}((0.25, -0.5))
-    output = PiezoAcousticFEM.evaluate_derived_fields(
-        fixture.assembly,
-        fixture.mat,
-        fixture.kin,
-        fixture.ip,
+    output = evaluate_derived_fields(
+        fixture.assembled,
         fixture.fields,
         1,
         [ξ],
     )
 
-    @test output isa ElementDerivedFieldOutput
+    @test output isa PiezoAcousticFEM.ElementDerivedFieldOutput
     @test output.cellid == 1
     @test output.reference_points == [ξ]
     @test output.metadata.output_kind == :element_derived_fields
@@ -76,11 +73,8 @@ end
     @test only(output.stress) ≈ PiezoAcousticFEM.stress(fixture.mat, expected_S, expected_E)
     @test only(output.electric_displacement) ≈
           PiezoAcousticFEM.electric_displacement(fixture.mat, expected_S, expected_E)
-    @test_throws ArgumentError PiezoAcousticFEM.evaluate_derived_fields(
-        fixture.assembly,
-        fixture.mat,
-        fixture.kin,
-        fixture.ip,
+    @test_throws ArgumentError evaluate_derived_fields(
+        fixture.assembled,
         fixture.fields,
         2,
         [ξ],
@@ -88,19 +82,16 @@ end
 end
 
 @testset "per-element derived field sampling" begin
-    fixture = linear_derived_field_fixture()
+    fixture = linear_assembled_fixture()
 
     output = sample_element_fields(
-        fixture.assembly,
-        fixture.mat,
-        fixture.kin,
-        fixture.ip,
+        fixture.assembled,
         fixture.fields,
         1;
         samples_per_axis=(3, 2),
     )
 
-    @test output isa ElementDerivedFieldOutput
+    @test output isa PiezoAcousticFEM.ElementDerivedFieldOutput
     @test output.metadata.output_kind == :element_sampled_fields
     @test output.metadata.evaluation == :reference_lattice
     @test output.metadata.samples_per_axis == (3, 2)
@@ -119,10 +110,7 @@ end
     @test first(output.potential) ≈ 5first_x[1] - 7first_x[2]
 
     @test_throws ArgumentError sample_element_fields(
-        fixture.assembly,
-        fixture.mat,
-        fixture.kin,
-        fixture.ip,
+        fixture.assembled,
         fixture.fields,
         1;
         samples_per_axis=1,
@@ -141,7 +129,7 @@ end
         z_coordinates,
     )
 
-    @test output isa PhysicalGridDerivedFieldOutput
+    @test output isa PiezoAcousticFEM.PhysicalGridDerivedFieldOutput
     @test output.r_coordinates == r_coordinates
     @test output.z_coordinates == z_coordinates
     @test output.metadata.output_kind == :physical_grid_derived_fields

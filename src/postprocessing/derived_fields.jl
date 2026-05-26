@@ -93,7 +93,7 @@ function _sample_physical_grid(
             throw(ArgumentError("physical sample point $point could not be mapped to a cell"))
 
         return first_element_derived_sample(
-            evaluate_derived_fields(
+            _evaluate_derived_fields(
                 assembly,
                 material,
                 formulation,
@@ -151,7 +151,7 @@ function sample_element_fields(
     cellid::Integer;
     samples_per_axis=5,
 )
-    return sample_element_fields(
+    return _sample_element_fields(
         assembled.assembly,
         assembled.material,
         assembled.problem.formulation,
@@ -164,37 +164,7 @@ function sample_element_fields(
 end
 
 
-function sample_element_fields(
-    result::HarmonicVoltageResult,
-    cellid::Integer;
-    samples_per_axis=5,
-)
-    fields = reconstruct_field_dofs(result)
-
-    return sample_element_fields(
-        result.assembled.assembly,
-        result.assembled.material,
-        result.problem.formulation,
-        result.problem.interpolation,
-        fields,
-        cellid;
-        samples_per_axis,
-        metadata=merge_sampled_field_metadata(
-            merge(
-                fields.metadata,
-                (
-                    analysis=:harmonic_voltage,
-                    harmonic_convention=result.analysis.convention,
-                    quantity_interpretation="complex amplitude",
-                ),
-            ),
-            samples_per_axis,
-        ),
-    )
-end
-
-
-function sample_element_fields(
+function _sample_element_fields(
     assembly::KFormAssembly,
     material::AxisymmetricRZPiezoMaterial,
     formulation::AxisymmetricRZ,
@@ -206,7 +176,7 @@ function sample_element_fields(
 )
     reference_points = reference_sample_points(formulation, samples_per_axis)
 
-    return evaluate_derived_fields(
+    return _evaluate_derived_fields(
         assembly,
         material,
         formulation,
@@ -220,7 +190,6 @@ end
 
 """
     evaluate_derived_fields(assembled, fields, cellid, reference_points)
-    evaluate_derived_fields(result, cellid, reference_points)
 
 Evaluate axisymmetric derived fields inside one element at local reference
 coordinates. The returned quantities include interpolated primary values,
@@ -232,7 +201,7 @@ function evaluate_derived_fields(
     cellid::Integer,
     reference_points,
 )
-    return evaluate_derived_fields(
+    return _evaluate_derived_fields(
         assembled.assembly,
         assembled.material,
         assembled.problem.formulation,
@@ -245,32 +214,7 @@ function evaluate_derived_fields(
 end
 
 
-function evaluate_derived_fields(result::HarmonicVoltageResult, cellid::Integer, reference_points)
-    fields = reconstruct_field_dofs(result)
-
-    return evaluate_derived_fields(
-        result.assembled.assembly,
-        result.assembled.material,
-        result.problem.formulation,
-        result.problem.interpolation,
-        fields,
-        cellid,
-        reference_points;
-        metadata=merge_derived_field_metadata(
-            merge(
-                fields.metadata,
-                (
-                    analysis=:harmonic_voltage,
-                    harmonic_convention=result.analysis.convention,
-                    quantity_interpretation="complex amplitude",
-                ),
-            ),
-        ),
-    )
-end
-
-
-function evaluate_derived_fields(
+function _evaluate_derived_fields(
     assembly::KFormAssembly,
     material::AxisymmetricRZPiezoMaterial,
     formulation::AxisymmetricRZ,

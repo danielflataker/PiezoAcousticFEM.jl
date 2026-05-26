@@ -34,9 +34,9 @@ problem = PiezoProblem(
 analysis = HarmonicVoltageAnalysis(2π * frequency, voltage, :exp_iomega_t)
 
 assembled = assemble(problem)
-prepare_analysis(assembled, analysis)
+prepared = prepare_analysis(assembled, analysis)
 
-result = solve(problem, analysis)
+result = solve(prepared, analysis)
 admittance = evaluate(AdmittanceObservable(), result)
 vtk_file = write_vtk(output_basename, result)
 

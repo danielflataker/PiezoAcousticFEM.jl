@@ -51,7 +51,7 @@ export solve, assemble, prepare_analysis, validate
 export HarmonicVoltageResult, HarmonicSweepPointResult, FrequencySweepResult, ShortCircuitModalResult
 export AbstractObservable, AdmittanceObservable, ChargeObservable, CurrentObservable
 export ModalFrequenciesObservable, evaluate
-export CompactFieldDofs, NodalFieldOutput, ElementDerivedFieldOutput, PhysicalGridDerivedFieldOutput
+export CompactFieldDofs, NodalFieldOutput
 export reconstruct_field_dofs, reconstruct_fields, evaluate_derived_fields, sample_element_fields
 export sample_physical_grid, write_vtk
 
