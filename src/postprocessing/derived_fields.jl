@@ -21,6 +21,124 @@ struct ElementDerivedFieldOutput{R,X,U,P,GU,GP,S,E,T,D,M}
 end
 
 """
+    PhysicalGridDerivedFieldOutput(...)
+
+Derived physical fields evaluated on a rectangular physical `(r, z)` sample
+grid. Samples are stored in `z`-major order with `r` varying fastest, matching
+the order produced by `sample_physical_grid`.
+"""
+struct PhysicalGridDerivedFieldOutput{R,Z,X,C,Ξ,U,P,GU,GP,S,E,T,D,M}
+    r_coordinates::R
+    z_coordinates::Z
+    coordinates::X
+    cellids::C
+    reference_points::Ξ
+    displacement::U
+    potential::P
+    displacement_gradient::GU
+    potential_gradient::GP
+    strain::S
+    electric_field::E
+    stress::T
+    electric_displacement::D
+    metadata::M
+end
+
+"""
+    sample_physical_grid(assembled, fields, r_coordinates, z_coordinates)
+
+Evaluate derived fields on a rectangular physical `(r, z)` grid across the
+mesh. Every requested point must lie inside a cell; this function is a sampling
+primitive and deliberately does not extrapolate, project, or choose
+visualization phase transforms.
+"""
+function sample_physical_grid(
+    assembled::AssembledPiezoProblem,
+    fields::CompactFieldDofs,
+    r_coordinates,
+    z_coordinates,
+)
+    return _sample_physical_grid(
+        assembled.assembly,
+        assembled.material,
+        assembled.problem.formulation,
+        assembled.problem.interpolation,
+        fields,
+        r_coordinates,
+        z_coordinates;
+        metadata=merge_physical_grid_metadata(fields.metadata),
+    )
+end
+
+
+function _sample_physical_grid(
+    assembly::KFormAssembly,
+    material::AxisymmetricRZPiezoMaterial,
+    formulation::AxisymmetricRZ,
+    interpolation,
+    fields::CompactFieldDofs,
+    r_coordinates,
+    z_coordinates;
+    metadata=merge_physical_grid_metadata(fields.metadata),
+)
+    r_values = validate_physical_grid_axis(r_coordinates, :r_coordinates)
+    z_values = validate_physical_grid_axis(z_coordinates, :z_coordinates)
+    points = [Vec{2}((r, z)) for z in z_values for r in r_values]
+    grid = ferrite_grid(assembly)
+    point_handler = PointEvalHandler(grid, points; warn=false)
+    samples = map(points, point_handler.cells, point_handler.local_coords) do point, cellid, ξ
+        cellid === nothing &&
+            throw(ArgumentError("physical sample point $point is outside the mesh"))
+        ξ === nothing &&
+            throw(ArgumentError("physical sample point $point could not be mapped to a cell"))
+
+        return first_element_derived_sample(
+            evaluate_derived_fields(
+                assembly,
+                material,
+                formulation,
+                interpolation,
+                fields,
+                cellid,
+                [ξ];
+                metadata,
+            )
+        )
+    end
+
+    return PhysicalGridDerivedFieldOutput(
+        r_values,
+        z_values,
+        points,
+        Int.(point_handler.cells),
+        point_handler.local_coords,
+        [sample.displacement for sample in samples],
+        [sample.potential for sample in samples],
+        [sample.displacement_gradient for sample in samples],
+        [sample.potential_gradient for sample in samples],
+        [sample.strain for sample in samples],
+        [sample.electric_field for sample in samples],
+        [sample.stress for sample in samples],
+        [sample.electric_displacement for sample in samples],
+        metadata,
+    )
+end
+
+
+function first_element_derived_sample(output::ElementDerivedFieldOutput)
+    return (
+        displacement=only(output.displacement),
+        potential=only(output.potential),
+        displacement_gradient=only(output.displacement_gradient),
+        potential_gradient=only(output.potential_gradient),
+        strain=only(output.strain),
+        electric_field=only(output.electric_field),
+        stress=only(output.stress),
+        electric_displacement=only(output.electric_displacement),
+    )
+end
+
+"""
     sample_element_fields(..., cellid; samples_per_axis=5)
 
 Evaluate derived fields on a tensor-product lattice of reference points inside
@@ -283,12 +401,33 @@ function merge_sampled_field_metadata(metadata, samples_per_axis)
 end
 
 
+function merge_physical_grid_metadata(metadata)
+    return merge(
+        merge_derived_field_metadata(metadata),
+        (
+            output_kind=:physical_grid_derived_fields,
+            evaluation=:physical_grid,
+            sample_order=:z_major_r_fastest,
+        ),
+    )
+end
+
+
 function reference_sample_points(::AxisymmetricRZ, samples_per_axis)
     nr, nz = normalize_samples_per_axis(samples_per_axis)
     ξr = range(-1.0, 1.0; length=nr)
     ξz = range(-1.0, 1.0; length=nz)
 
     return [Vec{2}((r, z)) for z in ξz for r in ξr]
+end
+
+
+function validate_physical_grid_axis(coordinates, name::Symbol)
+    values = collect(coordinates)
+    !isempty(values) || throw(ArgumentError("$name must contain at least one coordinate"))
+    all(isfinite, values) || throw(ArgumentError("$name must contain only finite coordinates"))
+
+    return values
 end
 
 

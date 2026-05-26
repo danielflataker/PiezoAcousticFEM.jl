@@ -23,6 +23,22 @@ function linear_derived_field_fixture()
     return (; kin, mat, assembly, ip, fields=CompactFieldDofs(displacement, potential; metadata=(analysis=:unit_test,)))
 end
 
+function linear_assembled_fixture()
+    fixture = linear_derived_field_fixture()
+    problem = PiezoProblem(
+        Ferrite.get_grid(fixture.assembly.dofhandler),
+        PZT5A(),
+        fixture.kin,
+        fixture.ip,
+        QuadratureRule{RefQuadrilateral}(2);
+        electrodes=TwoTerminalElectrodes(FacetElectrode("right"), FacetElectrode("left")),
+        boundary_conditions=AxisymmetricBoundaryConditions(()),
+        loss=Lossless(),
+    )
+
+    return (; fixture..., assembled=PiezoAcousticFEM.AssembledPiezoProblem(problem, fixture.mat, fixture.assembly))
+end
+
 @testset "element-local derived fields" begin
     fixture = linear_derived_field_fixture()
 
@@ -110,5 +126,58 @@ end
         fixture.fields,
         1;
         samples_per_axis=1,
+    )
+end
+
+@testset "physical RZ-grid derived field sampling" begin
+    fixture = linear_assembled_fixture()
+
+    r_coordinates = [1.0, 1.5, 2.0]
+    z_coordinates = [0.0, 0.25, 1.0]
+    output = sample_physical_grid(
+        fixture.assembled,
+        fixture.fields,
+        r_coordinates,
+        z_coordinates,
+    )
+
+    @test output isa PhysicalGridDerivedFieldOutput
+    @test output.r_coordinates == r_coordinates
+    @test output.z_coordinates == z_coordinates
+    @test output.metadata.output_kind == :physical_grid_derived_fields
+    @test output.metadata.evaluation == :physical_grid
+    @test output.metadata.sample_order == :z_major_r_fastest
+    @test length(output.coordinates) == length(r_coordinates) * length(z_coordinates)
+    @test output.coordinates == [Vec{2}((r, z)) for z in z_coordinates for r in r_coordinates]
+    @test all(==(1), output.cellids)
+    @test output.reference_points == [
+        Vec{2}((-1.0, -1.0)),
+        Vec{2}((0.0, -1.0)),
+        Vec{2}((1.0, -1.0)),
+        Vec{2}((-1.0, -0.5)),
+        Vec{2}((0.0, -0.5)),
+        Vec{2}((1.0, -0.5)),
+        Vec{2}((-1.0, 1.0)),
+        Vec{2}((0.0, 1.0)),
+        Vec{2}((1.0, 1.0)),
+    ]
+
+    for (i, x) in pairs(output.coordinates)
+        @test output.displacement[i] ≈ Vec{2}((2x[1] + 3x[2], -x[1] + 4x[2]))
+        @test output.potential[i] ≈ 5x[1] - 7x[2]
+        @test output.potential_gradient[i] ≈ Vec{2}((5.0, -7.0))
+    end
+
+    @test_throws ArgumentError sample_physical_grid(
+        fixture.assembled,
+        fixture.fields,
+        [0.5],
+        [0.5],
+    )
+    @test_throws ArgumentError sample_physical_grid(
+        fixture.assembled,
+        fixture.fields,
+        Float64[],
+        [0.5],
     )
 end
