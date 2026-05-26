@@ -117,6 +117,34 @@ end
     )
 end
 
+@testset "derived field VTK cell output" begin
+    fixture = linear_assembled_fixture()
+    grid = Ferrite.get_grid(fixture.assembly.dofhandler)
+    output = sample_element_fields(
+        fixture.assembled,
+        fixture.fields,
+        1;
+        samples_per_axis=(2, 2),
+    )
+
+    filename = write_vtk(tempname(), grid, [output])
+    vtk_text = read(filename, String)
+
+    @test isfile(filename)
+    @test occursin("<CellData", vtk_text)
+    @test occursin("derived_potential", vtk_text)
+    @test occursin("derived_displacement_r", vtk_text)
+    @test occursin("derived_strain_rr", vtk_text)
+    @test occursin("derived_electric_field_r", vtk_text)
+    @test occursin("derived_stress_rr", vtk_text)
+    @test occursin("piezoacousticfem_output_kind", vtk_text)
+    @test occursin("piezoacousticfem_cell_data_policy", vtk_text)
+    @test occursin("piezoacousticfem_evaluation", vtk_text)
+    @test_throws ArgumentError write_vtk(tempname(), grid, typeof(output)[])
+
+    rm(filename; force=true)
+end
+
 @testset "physical RZ-grid derived field sampling" begin
     fixture = linear_assembled_fixture()
 

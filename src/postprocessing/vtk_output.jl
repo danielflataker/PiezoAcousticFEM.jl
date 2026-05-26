@@ -17,6 +17,29 @@ function write_vtk(filename::AbstractString, grid, fields; metadata=nothing)
 end
 
 """
+    write_vtk(filename, grid, element_outputs::AbstractVector{<:ElementDerivedFieldOutput})
+
+Write element-local derived fields as VTK cell data. Multiple samples inside
+each element are averaged to one value per cell; no nodal projection or
+smoothing is performed.
+"""
+function write_vtk(
+    filename::AbstractString,
+    grid,
+    element_outputs::AbstractVector{<:ElementDerivedFieldOutput};
+    metadata=nothing,
+)
+    cell_outputs = derived_outputs_by_cell(grid, element_outputs)
+
+    VTKGridFile(String(filename), grid) do vtk
+        write_derived_cell_data(vtk, cell_outputs)
+        write_vtk_metadata(vtk, vtk_derived_cell_metadata(element_outputs; metadata))
+    end
+
+    return String(filename) * ".vtu"
+end
+
+"""
     write_vtk(filename, result::HarmonicVoltageResult)
 
 Reconstruct nodal fields from a harmonic voltage result and write them to a
@@ -76,6 +99,81 @@ end
 function write_vtk_metadata(vtk, metadata)
     for name in sort!(collect(keys(metadata)))
         vtk.vtk[name, VTKFieldData()] = metadata[name]
+    end
+
+    return vtk
+end
+
+function derived_outputs_by_cell(grid, element_outputs)
+    ncells = getncells(grid)
+    length(element_outputs) == ncells ||
+        throw(ArgumentError("derived VTK cell output requires one element output per grid cell"))
+
+    by_cell = Vector{eltype(element_outputs)}(undef, ncells)
+    seen = falses(ncells)
+    for output in element_outputs
+        1 <= output.cellid <= ncells ||
+            throw(ArgumentError("derived output cellid must be in 1:$ncells, got $(output.cellid)"))
+        !seen[output.cellid] ||
+            throw(ArgumentError("derived output contains duplicate cellid $(output.cellid)"))
+
+        by_cell[output.cellid] = output
+        seen[output.cellid] = true
+    end
+    all(seen) || throw(ArgumentError("derived output must include every grid cell exactly once"))
+
+    return by_cell
+end
+
+function vtk_derived_cell_metadata(element_outputs; metadata=nothing)
+    entries = Dict{String,String}()
+
+    !isempty(element_outputs) && hasproperty(first(element_outputs), :metadata) &&
+        merge_vtk_metadata!(entries, first(element_outputs).metadata)
+    metadata !== nothing && merge_vtk_metadata!(entries, metadata)
+
+    entries["piezoacousticfem_output_kind"] = "derived_cell_fields"
+    entries["piezoacousticfem_evaluation"] = "cell_average"
+    entries["piezoacousticfem_cell_data_policy"] =
+        "element-local samples are averaged per cell without nodal projection or smoothing"
+    return entries
+end
+
+function write_derived_cell_data(vtk, cell_outputs)
+    write_cell_components(vtk, averaged_cell_field(cell_outputs, :displacement), "derived_displacement", ("r", "z"))
+    write_cell_scalar_data(vtk, averaged_cell_field(cell_outputs, :potential), "derived_potential")
+    write_cell_components(vtk, averaged_cell_field(cell_outputs, :strain), "derived_strain", ("rr", "thetatheta", "zz", "rz"))
+    write_cell_components(vtk, averaged_cell_field(cell_outputs, :electric_field), "derived_electric_field", ("r", "z"))
+    write_cell_components(vtk, averaged_cell_field(cell_outputs, :stress), "derived_stress", ("rr", "thetatheta", "zz", "rz"))
+
+    return vtk
+end
+
+averaged_cell_field(cell_outputs, field) = cell_average.(getproperty.(cell_outputs, field))
+
+function cell_average(values)
+    !isempty(values) || throw(ArgumentError("derived cell output must contain at least one sample"))
+
+    total = sum(values)
+    return total / length(values)
+end
+
+function write_cell_scalar_data(vtk, data, name)
+    if eltype(data) <: Complex
+        write_cell_data(vtk, real.(data), "$(name)_real")
+        write_cell_data(vtk, imag.(data), "$(name)_imag")
+        write_cell_data(vtk, abs.(data), "$(name)_abs")
+        write_cell_data(vtk, angle.(data), "$(name)_phase")
+    else
+        write_cell_data(vtk, data, name)
+    end
+
+    return vtk
+end
+
+function write_cell_components(vtk, data, name, component_names)
+    for (component, component_name) in enumerate(component_names)
+        write_cell_scalar_data(vtk, [x[component] for x in data], "$(name)_$(component_name)")
     end
 
     return vtk
