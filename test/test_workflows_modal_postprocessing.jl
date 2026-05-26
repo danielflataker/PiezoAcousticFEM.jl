@@ -77,11 +77,14 @@ end
     @test voltage_sweep.reuse_level == :analysis_change
 
     failing_solver = FailsSecondLinearSolve()
-    failed_sweep = solve(reduction, sweep_analyses; solver=failing_solver)
+    @test_throws ErrorException solve(reduction, sweep_analyses; solver=failing_solver)
+
+    failed_sweep = solve(reduction, sweep_analyses; solver=FailsSecondLinearSolve(), fail_policy=:record)
     @test failed_sweep.results[1].status == :success
     @test failed_sweep.results[2].status == :failed
     @test failed_sweep.results[2].result === nothing
     @test failed_sweep.results[2].error isa ErrorException
+    @test_throws ArgumentError solve(reduction, sweep_analyses; fail_policy=:ignore)
 
     explicit_solution = PiezoAcousticFEM.solve_direct_voltage(
         reduction.reduced,
@@ -223,6 +226,8 @@ end
     @test solve(real_policy_problem, analysis) isa ShortCircuitModalResult
     @test_throws ArgumentError solve(complex_loss_problem, analysis)
     @test_throws ArgumentError solve(as_given_problem, analysis)
+    @test_throws ArgumentError prepare_analysis(assemble(complex_loss_problem), analysis)
+    @test_throws ArgumentError prepare_analysis(assemble(as_given_problem), analysis)
 end
 
 @testset "short-circuit modal analysis validates constructor arguments" begin

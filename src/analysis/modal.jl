@@ -27,11 +27,12 @@ check_supported(::PhysicalLoss{<:RealMaterial,<:NoSystemDamping}, ::ShortCircuit
 
 Dense short-circuit H-form plus homogeneous mechanical constraints.
 """
-struct ShortCircuitModalReduction{A,P,S,C,F}
+struct ShortCircuitModalReduction{A,P,S,C,R,F}
     assembled::A
     partition::P
     system::S
     mechanical_dirichlet::C
+    constrained::R
     free_dofs::F
 end
 
@@ -58,9 +59,10 @@ end
 
 function prepare_analysis(
     assembled::AssembledPiezoProblem,
-    ::ShortCircuitModalAnalysis,
+    analysis::ShortCircuitModalAnalysis,
 )
     problem = assembled.problem
+    check_supported(problem.loss, analysis)
     partition = short_circuit_partition(assembled.assembly, problem.electrodes)
     system = short_circuit_h_form_dense(assembled.assembly.system, partition)
     constraints = mechanical_dirichlet(assembled.assembly, problem.boundary_conditions)
@@ -71,6 +73,7 @@ function prepare_analysis(
         partition,
         system,
         constraints,
+        constrained,
         constrained.free,
     )
 end
@@ -80,11 +83,15 @@ function solve(problem::PiezoProblem, analysis::ShortCircuitModalAnalysis)
     check_supported(problem.loss, analysis)
     assembled = assemble(problem)
     reduction = prepare_analysis(assembled, analysis)
-    constrained = apply_modal_constraints(
-        reduction.system.Kuu,
-        reduction.system.Muu,
-        reduction.mechanical_dirichlet,
-    )
+
+    return solve(reduction, analysis)
+end
+
+
+function solve(reduction::ShortCircuitModalReduction, analysis::ShortCircuitModalAnalysis)
+    problem = reduction.assembled.problem
+    check_supported(problem.loss, analysis)
+    constrained = reduction.constrained
     eig = eigen(Symmetric(constrained.K), Symmetric(constrained.M))
     order = sortperm(real.(eig.values))
     selected = select_modes(order, analysis.nev)
@@ -97,7 +104,7 @@ function solve(problem::PiezoProblem, analysis::ShortCircuitModalAnalysis)
     ω = sqrt.(max.(λ, zero(eltype(λ))))
     f = ω ./ (2π)
 
-    return ShortCircuitModalResult(problem, analysis, assembled, reduction, λ, ω, f, modes, :mass)
+    return ShortCircuitModalResult(problem, analysis, reduction.assembled, reduction, λ, ω, f, modes, :mass)
 end
 
 

@@ -189,6 +189,7 @@ function prepare_analysis(
     analysis::HarmonicVoltageAnalysis,
 )
     problem = assembled.problem
+    check_supported(problem.loss, analysis)
     partition = potential_partition(
         assembled.assembly;
         driven=problem.electrodes.drive,
@@ -255,7 +256,7 @@ end
 
 
 """
-    solve(problem, analyses; solver=BackslashSolver())
+    solve(problem, analyses; solver=BackslashSolver(), fail_policy=:throw)
 
 Assemble, prepare once, and solve a collection of harmonic voltage analyses.
 """
@@ -263,30 +264,35 @@ function solve(
     problem::PiezoProblem,
     analyses::AbstractVector{<:HarmonicVoltageAnalysis};
     solver::AbstractLinearSolverConfig=BackslashSolver(),
+    fail_policy::Symbol=:throw,
 )
     isempty(analyses) && throw(ArgumentError("frequency sweep analyses must not be empty"))
     check_supported(problem.loss, first(analyses))
     assembled = assemble(problem)
     reduction = prepare_analysis(assembled, first(analyses))
 
-    return solve(reduction, analyses; solver)
+    return solve(reduction, analyses; solver, fail_policy)
 end
 
 
 """
-    solve(reduction, analyses; solver=BackslashSolver())
+    solve(reduction, analyses; solver=BackslashSolver(), fail_policy=:throw)
 
 Solve a collection of harmonic voltage analyses with one prepared reduction.
 This reuses assembly, electrode reduction, and mechanical constraints across
-the sweep.
+the sweep. By default, per-point errors are rethrown so package bugs are not
+hidden. Use `fail_policy=:record` to store failed points in the returned sweep
+result.
 """
 function solve(
     reduction::HarmonicVoltageReduction,
     analyses::AbstractVector{<:HarmonicVoltageAnalysis};
     solver::AbstractLinearSolverConfig=BackslashSolver(),
+    fail_policy::Symbol=:throw,
 )
     isempty(analyses) && throw(ArgumentError("frequency sweep analyses must not be empty"))
-    results = [solve_sweep_point(reduction, analysis; solver) for analysis in analyses]
+    check_sweep_fail_policy(fail_policy)
+    results = [solve_sweep_point(reduction, analysis; solver, fail_policy) for analysis in analyses]
 
     return FrequencySweepResult(
         reduction.assembled.problem,
@@ -303,14 +309,24 @@ function solve_sweep_point(
     reduction::HarmonicVoltageReduction,
     analysis::HarmonicVoltageAnalysis;
     solver::AbstractLinearSolverConfig,
+    fail_policy::Symbol,
 )
     try
         return successful_sweep_point(analysis, solve(reduction, analysis; solver))
     catch err
         err isa InterruptException && rethrow()
+        fail_policy === :throw && rethrow()
 
         return failed_sweep_point(analysis, err)
     end
+end
+
+
+function check_sweep_fail_policy(fail_policy::Symbol)
+    fail_policy in (:throw, :record) ||
+        throw(ArgumentError("fail_policy must be :throw or :record, got $fail_policy"))
+
+    return nothing
 end
 
 
