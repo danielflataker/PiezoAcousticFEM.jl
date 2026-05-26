@@ -37,7 +37,7 @@ assembled = assemble(problem)
 prepared = prepare_analysis(assembled, analysis)
 
 result = solve(prepared, analysis)
-admittance = evaluate(AdmittanceObservable(), result)
+admittance = result.solution.drive_terminal_admittance
 vtk_file = write_vtk(output_basename, result)
 
 if abspath(PROGRAM_FILE) == @__FILE__
