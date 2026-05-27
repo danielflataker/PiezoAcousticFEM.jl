@@ -235,6 +235,8 @@ end
     @test ShortCircuitModalAnalysis(0).nev == 0
     @test_throws ArgumentError ShortCircuitModalAnalysis(-1)
     @test_throws ArgumentError ShortCircuitModalAnalysis(1.5)
+    @test PiezoAcousticFEM.modal_angular_frequencies([-1.0e-12, 4.0]) ≈ [0.0, 2.0]
+    @test_throws ArgumentError PiezoAcousticFEM.modal_angular_frequencies([-1.0e-3, 4.0])
 end
 
 @testset "VTK solution output" begin

@@ -50,31 +50,6 @@ struct ShortCircuitDofPartition
     end
 end
 
-"""
-    OpenCircuitDofPartition(nϕ, internal, floating, reference)
-
-Placeholder partition shape for later open-circuit reductions. It records the
-distinct electrical roles without pretending they are voltage-driven DOFs.
-"""
-struct OpenCircuitDofPartition
-    nϕ::Int
-    internal::Vector{Int}
-    floating::Vector{Int}
-    reference::Vector{Int}
-
-    function OpenCircuitDofPartition(nϕ::Integer, internal, floating, reference)
-        nϕ >= 0 || throw(ArgumentError("nϕ must be nonnegative"))
-        i = collect(Int, internal)
-        f = collect(Int, floating)
-        r = collect(Int, reference)
-        isempty(f) && throw(ArgumentError("partition.floating must contain at least one electrode DOF"))
-        isempty(r) && throw(ArgumentError("partition.reference must contain at least one electrode DOF"))
-        validate_partition_coverage(Int(nϕ), i, f, r)
-
-        return new(Int(nϕ), i, f, r)
-    end
-end
-
 function validate_partition_coverage(nϕ::Int, parts...)
     all_phi = reduce(vcat, parts; init=Int[])
     length(all_phi) == nϕ ||

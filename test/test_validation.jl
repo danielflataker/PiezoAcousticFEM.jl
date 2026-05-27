@@ -30,6 +30,28 @@ end
 
     problem = validation_test_problem(; grid, ip, qr)
     @test validate(problem) === nothing
+    @test_throws ArgumentError validation_test_problem(;
+        grid,
+        ip,
+        qr,
+        electrodes=(drive=FacetElectrode("top"), reference=FacetElectrode("bottom")),
+    )
+    @test_throws ArgumentError validation_test_problem(;
+        grid,
+        ip,
+        qr,
+        boundary_conditions=(),
+    )
+    @test_throws ArgumentError PiezoProblem(
+        grid,
+        PZT5A(),
+        AxisymmetricRZ(),
+        ip,
+        qr;
+        electrodes=TwoTerminalElectrodes(FacetElectrode("top"), FacetElectrode("bottom")),
+        boundary_conditions=AxisymmetricBoundaryConditions((AxisBoundary(FacetBoundary("left")),)),
+        loss=nothing,
+    )
 
     wrong_shape_problem = validation_test_problem(;
         grid,

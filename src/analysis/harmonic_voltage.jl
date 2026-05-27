@@ -27,6 +27,8 @@ function PiezoProblem(
     boundary_conditions,
     loss,
 )
+    validate_problem_contract(formulation, electrodes, boundary_conditions, loss)
+
     return PiezoProblem(
         grid,
         material_source,
@@ -37,6 +39,20 @@ function PiezoProblem(
         boundary_conditions,
         loss,
     )
+end
+
+
+function validate_problem_contract(formulation, electrodes, boundary_conditions, loss)
+    formulation isa AxisymmetricRZ ||
+        throw(ArgumentError("PiezoProblem currently supports only AxisymmetricRZ formulation"))
+    electrodes isa TwoTerminalElectrodes ||
+        throw(ArgumentError("PiezoProblem currently supports only TwoTerminalElectrodes"))
+    boundary_conditions isa AxisymmetricBoundaryConditions ||
+        throw(ArgumentError("PiezoProblem currently supports only AxisymmetricBoundaryConditions"))
+    loss isa AbstractLossModel ||
+        throw(ArgumentError("PiezoProblem loss must be an AbstractLossModel"))
+
+    return nothing
 end
 
 

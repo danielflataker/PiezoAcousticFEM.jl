@@ -101,7 +101,7 @@ function solve(reduction::ShortCircuitModalReduction, analysis::ShortCircuitModa
 
     modes = zeros(eltype(free_modes), size(reduction.system.Kuu, 1), size(free_modes, 2))
     modes[constrained.free, :] = free_modes
-    ω = sqrt.(max.(λ, zero(eltype(λ))))
+    ω = modal_angular_frequencies(λ)
     f = ω ./ (2π)
 
     return ShortCircuitModalResult(problem, analysis, reduction.assembled, reduction, λ, ω, f, modes, :mass)
@@ -146,4 +146,29 @@ function normalize_modes!(modes, M)
     end
 
     return modes
+end
+
+
+function modal_angular_frequencies(λ)
+    isempty(λ) && return similar(λ)
+
+    tolerance = modal_negative_eigenvalue_tolerance(λ)
+    for value in λ
+        value < -tolerance &&
+            throw(ArgumentError(
+                "modal eigenvalue is negative beyond tolerance: λ=$value, tolerance=$tolerance",
+            ))
+    end
+
+    return sqrt.([value < zero(value) ? zero(value) : value for value in λ])
+end
+
+
+function modal_negative_eigenvalue_tolerance(λ)
+    isempty(λ) && return 0.0
+
+    scale = maximum(abs, λ)
+    T = typeof(float(scale))
+
+    return sqrt(eps(T)) * max(one(T), scale)
 end

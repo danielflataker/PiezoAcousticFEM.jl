@@ -42,36 +42,6 @@ function zero_piezo_element_matrices(
 end
 
 
-function displacement_shape_value(cellvalues, q, a)
-    N = shape_value(cellvalues, q, a)
-
-    return @SMatrix [
-        N 0
-        0 N
-    ]
-end
-
-
-function displacement_shape_gradient(cellvalues, q, a)
-    ∇N = shape_gradient(cellvalues, q, a)
-
-    # ∇u[i,j] = ∂u_i/∂x_j
-    #
-    # For node a:
-    # u_r = N_a * u_ra
-    # u_z = N_a * u_za
-    #
-    # Bidrag fra u_ra:
-    # ∇u = [∂N/∂r  ∂N/∂z
-    #       0       0]
-    #
-    # Bidrag fra u_za:
-    # ∇u = [0       0
-    #       ∂N/∂r  ∂N/∂z]
-    return ∇N
-end
-
-
 function Bu_matrix(kin::AxisymmetricRZ, cellvalues, q, x)
     nᵤ = getnbasefunctions(cellvalues)
     T = eltype(x)
